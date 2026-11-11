@@ -102,8 +102,30 @@ fn unique_value_name(pt: &PivotTable, base: &str, except: Option<usize>) -> Stri
     (2..10_000).map(|k| format!("{base}{k}")).find(|n| !taken(n)).unwrap_or_else(|| base.to_string())
 }
 
+/// A value field's automatic name ("Sum of Sales"); in French when cells show French words, as
+/// Excel in French names it ("Somme de Ventes").
 fn auto_name(f: PivotFunc, field: &str) -> String {
+    if gridcraft_numfmt::french_words() { french_auto_name(f, field) } else { english_auto_name(f, field) }
+}
+
+fn english_auto_name(f: PivotFunc, field: &str) -> String {
     format!("{} of {field}", pv::func_caption(f))
+}
+
+fn french_auto_name(f: PivotFunc, field: &str) -> String {
+    let verb = match f {
+        PivotFunc::Sum => "Somme",
+        PivotFunc::Count | PivotFunc::CountNumbers => "Nombre",
+        PivotFunc::Average => "Moyenne",
+        PivotFunc::Max => "Max",
+        PivotFunc::Min => "Min",
+        PivotFunc::Product => "Produit",
+        PivotFunc::StdDev => "Ecartype",
+        PivotFunc::StdDevP => "Ecartypep",
+        PivotFunc::Var => "Var",
+        PivotFunc::VarP => "Varp",
+    };
+    format!("{verb} de {field}")
 }
 
 /// Adds `field` to an area (moving it out of the other axis areas).
@@ -513,7 +535,7 @@ pub(super) fn value_settings(s: &mut Session, p: &Json) -> Result<Json> {
                 cur.name.eq_ignore_ascii_case(base) || cur.name.strip_prefix(base).is_some_and(|r| r.chars().all(|c| c.is_ascii_digit()))
             };
             let legacy = cur.func == PivotFunc::CountNumbers && is_auto(&format!("Count Numbers of {}", cur.source_col));
-            if is_auto(&auto_name(cur.func, &cur.source_col)) || legacy {
+            if is_auto(&english_auto_name(cur.func, &cur.source_col)) || is_auto(&french_auto_name(cur.func, &cur.source_col)) || legacy {
                 v.name = unique_value_name(pt, &auto_name(f, &cur.source_col), Some(i));
             }
         }

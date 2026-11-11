@@ -126,8 +126,13 @@ pub(super) enum ColKind {
 const MAX_CAPTION_LABEL_CHARS: usize = 255;
 
 /// `label` (cut to [`MAX_CAPTION_LABEL_CHARS`]) and `suffix`, as in "East Total".
+/// In French the total comes first, as in Excel in French: "Total Est".
 pub(super) fn caption(label: &str, suffix: &str) -> String {
-    let mut out: String = label.chars().take(MAX_CAPTION_LABEL_CHARS).collect();
+    let cut: String = label.chars().take(MAX_CAPTION_LABEL_CHARS).collect();
+    if suffix == "Total" && gridcraft_numfmt::french_words() {
+        return format!("{} {cut}", crate::report_words::label("Total"));
+    }
+    let mut out = cut;
     out.push(' ');
     out.push_str(suffix);
     out

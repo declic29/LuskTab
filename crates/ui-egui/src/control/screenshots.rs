@@ -327,7 +327,7 @@ impl Shots {
 
 /// Sends one screenshot rejection carrying the request token.
 pub(super) fn reject_shot(reply: Sender<ControlResponse>, token: u64, message: impl std::fmt::Display) {
-    let _ = reply.send(json!({"ok": false, "error": message.to_string(), "request": token}));
+    let _ = reply.send(crate::agent_messages::reply(json!({"ok": false, "error": message.to_string(), "request": token})));
 }
 
 /// The geometry to use for admission, issuance and drain.
@@ -646,7 +646,7 @@ fn finish_shot(app: &mut SheetApp, i: usize, reply: Json) {
     if let Some(slot) = request.slot {
         slot.cancel();
     }
-    let _ = request.reply.send(with_token(reply, request.token));
+    let _ = request.reply.send(crate::agent_messages::reply(with_token(reply, request.token)));
 }
 
 /// Remove request `i`, cancel its slot and reject it with `message`.

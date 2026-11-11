@@ -517,7 +517,7 @@ pub fn poll(app: &mut SheetApp, ctx: &egui::Context) {
         let outcome = handle(app, ctx, &req.method, &req.params);
         match outcome {
             Outcome::Done(v) => {
-                let _ = req.reply.send(v);
+                let _ = req.reply.send(crate::agent_messages::reply(v));
             }
             Outcome::Screenshot { path } => admit(app, ctx, path, req.reply),
         }

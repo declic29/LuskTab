@@ -108,9 +108,21 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   filtre « (Sélectionner tout) »…), avec environ 480 traductions de plus. Outils :
   `crate::i18n::tr(ui, "…")` dans le code d'affichage, `crate::i18n::tr_now("…")` ailleurs ;
   les phrases avec une valeur utilisent des clés à emplacement (`"Average: {value}"`).
-  `cargo xtask i18n-report` donne « fr: 0 missing ». Restent en anglais : les messages techniques
-  du canal de pilotage (agents, captures d'écran) et les intitulés que l'Analyse de données écrit
-  dans les cellules des rapports (Moyenne, Erreur-type…), qui viennent du moteur.
+  `cargo xtask i18n-report` donne « fr: 0 missing ».
+- 11 novembre 2026, **rapports en français** : quand l'interface est en français, les intitulés
+  que le moteur écrit dans les cellules sont en français, comme dans Excel en français :
+  Analyse de données (Moyenne, Erreur-type, RAPPORT DÉTAILLÉ, ANALYSE DE VARIANCE, Niveau de
+  confiance(95,0%)…), rapports du Solveur (feuilles « Rapport des réponses 1 »…), Synthèse de
+  scénarios, Feuille de prévision (Chronologie, Prévision(…)), tableaux croisés dynamiques
+  (Étiquettes de lignes, Total général, « Total Est », champs « Somme de Ventes »). Table :
+  `crates/engine/src/report_words.rs`, activée par le réglage des mots français de l'affichage
+  (`gridcraft_numfmt::french_words`) ; les tests et l'outil en ligne de commande restent en
+  anglais. « (blank) » des tableaux croisés reste en anglais, car il sert aussi aux filtres
+  enregistrés.
+- 11 novembre 2026, **messages aux agents en français** : les erreurs que le canal de pilotage
+  renvoie aux agents (captures d'écran, saisie synthétique, impression, commandes `ui.*`) sont
+  traduites au moment de l'envoi (`crates/ui-egui/src/agent_messages.rs`), dans la langue de
+  l'interface ; les autres messages passent par le catalogue français.
 
 ## À faire (dans l'ordre du cahier des charges)
 
@@ -118,12 +130,10 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
    `ArtCraft\GridCraft`, éditeur), macOS (`package.sh`, nom de l'app, DMG : le fond
    `packaging/macos/dmg/background.svg` pointait vers l'ancienne icône SVG, à refaire),
    `sign.ps1`, `flatpak-oci.sh`.
-2. Intitulés des rapports de l'Analyse de données et du Solveur en français (écrits par le
-   moteur dans les cellules).
-3. Accueil avec le renard, page Mises à jour reliée à `declic29/LuskTab`, OneDrive et Google Drive.
-4. Aide en français et page Confidentialité (après un audit réseau).
-5. Installateurs en français et workflow « Publication » (repris de Lusk Texte).
-6. Version 1.0.0.
+2. Accueil avec le renard, page Mises à jour reliée à `declic29/LuskTab`, OneDrive et Google Drive.
+3. Aide en français et page Confidentialité (après un audit réseau).
+4. Installateurs en français et workflow « Publication » (repris de Lusk Texte).
+5. Version 1.0.0.
 
 ## Façon de travailler avec Claude
 

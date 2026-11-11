@@ -204,7 +204,7 @@ fn write_headers(g: &mut Grid, input: HeaderInput<'_>) -> Result<(), String> {
             return;
         }
         if compact {
-            g.set(r, 0, Value::text("Row Labels"), CellKind::Header, 0, None);
+            g.set(r, 0, crate::report_words::text("Row Labels"), CellKind::Header, 0, None);
         } else {
             // One column per row field, Σ Values ("Values") at its place.
             let mut names: Vec<&str> = row_fields.iter().map(|f| f.source_col.as_str()).collect();
@@ -225,7 +225,7 @@ fn write_headers(g: &mut Grid, input: HeaderInput<'_>) -> Result<(), String> {
             match vi {
                 Some(vi) => g.set(r, l + j, Value::text(val_name(*vi)), CellKind::Header, 0, None),
                 // Values on rows, no column field: the one data column is the grand total.
-                None if on_rows => g.set(r, l + j, Value::text("Total"), CellKind::Header, 0, None),
+                None if on_rows => g.set(r, l + j, crate::report_words::text("Total"), CellKind::Header, 0, None),
                 None => {}
             }
         }
@@ -235,7 +235,11 @@ fn write_headers(g: &mut Grid, input: HeaderInput<'_>) -> Result<(), String> {
             g.set(cap, 0, Value::text(val_name(0)), CellKind::Header, 0, None);
         }
         if headers_on {
-            let caption = if compact { "Column Labels".to_string() } else { col_fields.first().map(|f| f.source_col.clone()).unwrap_or_default() };
+            let caption = if compact {
+                crate::report_words::label("Column Labels")
+            } else {
+                col_fields.first().map(|f| f.source_col.clone()).unwrap_or_default()
+            };
             g.set(cap, l, Value::text(caption), CellKind::Header, 0, None);
         }
         let levels = col_fields.len() + usize::from(k > 1 && !on_rows);
@@ -275,7 +279,7 @@ fn write_headers(g: &mut Grid, input: HeaderInput<'_>) -> Result<(), String> {
                 ColKind::Grand => {
                     let text = match vi {
                         Some(vi) if k > 1 => format!("Total {}", val_name(*vi)),
-                        _ => "Grand Total".to_string(),
+                        _ => crate::report_words::label("Grand Total"),
                     };
                     g.set(first_level, c, Value::text(text), CellKind::ColLabel, 0, None);
                 }
@@ -592,7 +596,7 @@ pub(super) fn compute_from(wb: &Workbook, pt: &PivotTable, src: &Source, mut pro
             if on_rows {
                 lines.extend(val_names.iter().enumerate().map(|(vi, name)| grand(format!("Total {name}"), Some(vi))));
             } else {
-                lines.push(grand("Grand Total".into(), None));
+                lines.push(grand(crate::report_words::label("Grand Total"), None));
             }
         }
     }
@@ -715,7 +719,7 @@ pub(super) fn compute_from(wb: &Workbook, pt: &PivotTable, src: &Source, mut pro
             {
                 parts.push(val_name(*vi));
             } else if parts.is_empty() {
-                parts.push("Total".into());
+                parts.push(crate::report_words::label("Total"));
             }
             Some(((l + j) as u32, parts.join(" - ")))
         })

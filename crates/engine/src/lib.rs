@@ -22,6 +22,7 @@ pub mod pivot;
 pub mod pivot_calc;
 pub mod recent;
 pub mod record;
+pub mod report_words;
 pub mod sample;
 pub mod selection;
 pub mod tables;

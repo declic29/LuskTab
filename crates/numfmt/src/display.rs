@@ -77,6 +77,12 @@ fn french() -> bool {
     !CANONICAL.with(Cell::get) && WORDS_OVERRIDE.with(Cell::get).unwrap_or_else(|| FRENCH_WORDS.load(Ordering::Relaxed))
 }
 
+/// Are cells shown with French words on this thread (VRAI, #VALEUR!, and the labels reports
+/// write)? Off while a canonical result is formatted.
+pub fn french_words() -> bool {
+    french()
+}
+
 /// TRUE or FALSE as shown.
 pub fn bool_text(b: bool) -> &'static str {
     match (french(), b) {

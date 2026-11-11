@@ -301,7 +301,7 @@ impl Grid {
         }
     }
     fn txt(&mut self, r: u32, c: u32, t: impl AsRef<str>) {
-        self.put(r, c, Value::text(t.as_ref()));
+        self.put(r, c, crate::report_words::text(t.as_ref()));
     }
     fn num(&mut self, r: u32, c: u32, x: f64) {
         self.put(r, c, Value::number(x));

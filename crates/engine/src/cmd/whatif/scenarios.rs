@@ -247,9 +247,9 @@ pub(super) fn scenario_summary(s: &mut Session, p: &Json) -> Result<Json> {
     let changing_fmts: Vec<_> = changing.iter().map(|c| fmt_of(*c)).collect();
     let result_fmts: Vec<_> = results.iter().map(|c| fmt_of(*c)).collect();
     let name = (1..)
-        .map(|n| if n == 1 { "Scenario Summary".to_string() } else { format!("Scenario Summary {n}") })
+        .map(|n| crate::report_words::label(&if n == 1 { "Scenario Summary".to_string() } else { format!("Scenario Summary {n}") }))
         .find(|n| d.wb.sheet_index(n).is_none())
-        .unwrap_or_else(|| "Scenario Summary".into());
+        .unwrap_or_else(|| crate::report_words::label("Scenario Summary"));
     let names: Vec<String> = scenarios.iter().map(|x| x.name.clone()).collect();
     let new_index = edit(s, |cx| {
         let bold = cx.wb.styles.derive(StyleId::DEFAULT, |st| st.font.bold = true);
@@ -257,12 +257,12 @@ pub(super) fn scenario_summary(s: &mut Session, p: &Json) -> Result<Json> {
         let put = |sheet: &mut Sheet, row: u32, col: u32, v: Value, style: StyleId| {
             sheet.set_cell(CellRef::new(row, col), Cell { value: v, formula: None, style, py: None });
         };
-        put(&mut sheet, 1, 1, Value::text("Scenario Summary"), bold);
-        put(&mut sheet, 2, 2, Value::text("Current Values:"), bold);
+        put(&mut sheet, 1, 1, crate::report_words::text("Scenario Summary"), bold);
+        put(&mut sheet, 2, 2, crate::report_words::text("Current Values:"), bold);
         for (k, n) in names.iter().enumerate() {
             put(&mut sheet, 2, 3 + k as u32, Value::text(n.as_str()), bold);
         }
-        put(&mut sheet, 3, 1, Value::text("Changing Cells:"), bold);
+        put(&mut sheet, 3, 1, crate::report_words::text("Changing Cells:"), bold);
         let mut row = 4u32;
         for (i, c) in changing.iter().enumerate() {
             let fmt = changing_fmts.get(i).cloned().unwrap_or_default();
@@ -276,7 +276,7 @@ pub(super) fn scenario_summary(s: &mut Session, p: &Json) -> Result<Json> {
             row += 1;
         }
         if !results.is_empty() {
-            put(&mut sheet, row, 1, Value::text("Result Cells:"), bold);
+            put(&mut sheet, row, 1, crate::report_words::text("Result Cells:"), bold);
             row += 1;
             for (i, c) in results.iter().enumerate() {
                 let fmt = result_fmts.get(i).cloned().unwrap_or_default();
@@ -293,7 +293,9 @@ pub(super) fn scenario_summary(s: &mut Session, p: &Json) -> Result<Json> {
             &mut sheet,
             row + 1,
             1,
-            Value::text("Notes: Current Values column represents values of changing cells at time Scenario Summary Report was created."),
+            crate::report_words::text(
+                "Notes: Current Values column represents values of changing cells at time Scenario Summary Report was created.",
+            ),
             StyleId::DEFAULT,
         );
         sheet.cols.insert(1, gridcraft_model::LineInfo { size: Some(110.0), ..Default::default() });

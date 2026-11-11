@@ -220,7 +220,8 @@ fn forecast_sheet(s: &mut Session, p: &Json) -> Result<Json> {
         Some(v) if header && !v.is_empty() => v.display(),
         _ => fallback.to_string(),
     };
-    let (tname, vname) = (name_of(tcells.first(), "Timeline"), name_of(vcells.first(), "Values"));
+    let (tname, vname) =
+        (name_of(tcells.first(), &crate::report_words::label("Timeline")), name_of(vcells.first(), &crate::report_words::label("Values")));
     let skip = usize::from(header);
     let mut rows: Vec<(f64, Value)> = Vec::new();
     for (t, v) in tcells.iter().zip(&vcells).skip(skip) {
@@ -310,10 +311,10 @@ fn forecast_sheet(s: &mut Session, p: &Json) -> Result<Json> {
     if let Some(a) = opts.aggregate {
         tail.push_str(&format!(",{a}"));
     }
-    let mut headers = vec![tname, vname.clone(), format!("Forecast({vname})")];
+    let mut headers = vec![tname, vname.clone(), crate::report_words::label(&format!("Forecast({vname})"))];
     if opts.confidence.is_some() {
-        headers.push(format!("Lower Confidence Bound({vname})"));
-        headers.push(format!("Upper Confidence Bound({vname})"));
+        headers.push(crate::report_words::label(&format!("Lower Confidence Bound({vname})")));
+        headers.push(crate::report_words::label(&format!("Upper Confidence Bound({vname})")));
     }
     // Table column names are unique.
     for i in 1..headers.len() {
@@ -383,8 +384,8 @@ fn forecast_sheet(s: &mut Session, p: &Json) -> Result<Json> {
             forecast_row(&mut sheet, r);
         }
         if opts.statistics {
-            put(&mut sheet, 0, stats_col, Value::text("Statistic"), bold);
-            put(&mut sheet, 0, stats_col + 1, Value::text("Value"), bold);
+            put(&mut sheet, 0, stats_col, crate::report_words::text("Statistic"), bold);
+            put(&mut sheet, 0, stats_col + 1, crate::report_words::text("Value"), bold);
             for (k, label) in ["Alpha", "Beta", "Gamma", "MASE", "SMAPE", "MAE", "RMSE"].iter().enumerate() {
                 let r = k as u32 + 1;
                 put(&mut sheet, r, stats_col, Value::text(*label), StyleId::DEFAULT);

@@ -328,7 +328,7 @@ pub(super) fn prepare_reports(
             ReportKind::Limits => limits_report(d, sh, inp)?,
         };
         let name = (1..=10_000u32)
-            .map(|i| format!("{} Report {i}", k.title()))
+            .map(|i| crate::report_words::label(&format!("{} Report {i}", k.title())))
             .find(|n| d.wb.sheet_index(n).is_none() && !built.iter().any(|(b, _): &(String, Lines)| b == n))
             .ok_or_else(|| EngineError::Other("Too many report sheets.".into()))?;
         built.push((name, lines));
@@ -356,6 +356,11 @@ pub(super) fn write_reports(cx: &mut Ctx, at: usize, built: Vec<(String, Lines)>
     for (i, (name, lines)) in built.into_iter().enumerate() {
         let mut sheet = Sheet::new(name);
         for (r, c, v, b) in lines {
+            // Labels in French when cells show French words; names and numbers as they are.
+            let v = match v {
+                Value::Text(t) => crate::report_words::text(&t),
+                v => v,
+            };
             let style = if b { bold } else { gridcraft_model::StyleId::DEFAULT };
             sheet.set_cell(CellRef::new(r, c), Cell { value: v, formula: None, style, py: None });
         }
