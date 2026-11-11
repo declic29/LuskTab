@@ -53,7 +53,7 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   travail de Claude ; elles ont été mises de côté (`git stash`) et l'étape refaite à la main.
 
 - 11 novembre 2026, **fonctions en français** : `FormulaLocale::Fr` (crate `formula`), utilisé
-  quand l'interface est en français. 393 noms traduits dans `crates/formula/src/french.rs`
+  quand l'interface est en français. 394 noms traduits dans `crates/formula/src/french.rs`
   (sources : tables anglais/français d'excel-pratique.com, recoupées avec HyperFormula frFR et la
   liste de Microsoft) ; les autres fonctions gardent leur nom (ABS, DATE, INDEX…). Point-virgule
   entre les arguments, virgule décimale, `{1.2;3.4}` pour les tableaux, VRAI/FAUX. Les formules

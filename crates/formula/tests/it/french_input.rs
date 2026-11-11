@@ -29,6 +29,7 @@ fn french_names_and_separators_like_excel_in_french() {
         ("JOURSEM(A1;2)", "WEEKDAY(A1,2)"),
         ("ECARTYPE.STANDARD(A1:A9)", "STDEV.S(A1:A9)"),
         ("MAX.SI.ENS(B:B;A:A;\"x\")", "MAXIFS(B:B,A:A,\"x\")"),
+        ("POURCENTAGE.DE(B2;B1:B9)", "PERCENTOF(B2,B1:B9)"),
         ("=vrai", "TRUE"),
         ("=FAUX", "FALSE"),
         ("VRAI()", "TRUE()"),
