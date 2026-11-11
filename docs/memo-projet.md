@@ -52,7 +52,23 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
 - Le 11 novembre à 16 h 02, des modifications d'origine inconnue sont apparues dans la copie de
   travail de Claude ; elles ont été mises de côté (`git stash`) et l'étape refaite à la main.
 
+- 11 novembre 2026, **fonctions en français** : `FormulaLocale::Fr` (crate `formula`), utilisé
+  quand l'interface est en français. 393 noms traduits dans `crates/formula/src/french.rs`
+  (sources : tables anglais/français d'excel-pratique.com, recoupées avec HyperFormula frFR et la
+  liste de Microsoft) ; les autres fonctions gardent leur nom (ABS, DATE, INDEX…). Point-virgule
+  entre les arguments, virgule décimale, `{1.2;3.4}` pour les tableaux, VRAI/FAUX. Les formules
+  restent enregistrées en anglais dans les fichiers. Les noms anglais restent acceptés, sauf TRIM
+  (= TRI modifié, MIRR, en français) et VAR.P (= VARP), comme dans Excel en français. Aide en
+  français des ~50 fonctions courantes (`crates/ui-egui/src/i18n/fr_functions.rs`). Tests :
+  `crates/formula/tests/it/french_input.rs`, `formula_locale::tests::french_function_help`.
+
 ## À faire (dans l'ordre du cahier des charges)
+
+- **Affichage régional** : les cellules affichent encore `1.5` et les dates à l'américaine. Les
+  formats régionaux français existent (`crates/core/src/region.rs`, `FR_FR`) mais
+  `Workbook.region` n'est jamais réglé ni utilisé à l'affichage : à brancher (région du système,
+  réglable dans les options).
+- Codes d'erreur en français (#VALEUR!, #NOM?, #DIV/0!…) et noms par défaut Classeur1 / Feuil1.
 
 1. Fin de la marque avec les installateurs : fichiers Windows (`gridcraft.wxs`, dossier
    `ArtCraft\GridCraft`, éditeur), macOS (`package.sh`, nom de l'app, DMG : le fond

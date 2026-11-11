@@ -170,4 +170,16 @@ mod tests {
         assert_eq!(description("SUMIFS", Es, Language::Es).as_deref(), Some("Adds the cells that meet every condition."));
         assert_eq!(sig("IF", En, Language::En), "IF(logical_test, [value_if_true], [value_if_false])");
     }
+
+    /// French, as in Excel in French: French names, `;` between arguments, French help.
+    #[test]
+    fn french_function_help() {
+        use FormulaLocale::Fr;
+        assert_eq!(sig("somme", Fr, Language::Fr), "SOMME(nombre1; [nombre2]; ...)");
+        assert_eq!(sig("SI", Fr, Language::Fr), "SI(test_logique; [valeur_si_vrai]; [valeur_si_faux])");
+        assert_eq!(description("SOMME", Fr, Language::Fr).as_deref(), Some("Additionne tous les nombres."));
+        let vlookup = sig("RECHERCHEV", Fr, Language::Fr);
+        assert_eq!(vlookup, "RECHERCHEV(valeur_cherchée; table_matrice; no_index_col; [valeur_proche])");
+        assert_eq!(description("RECHERCHEV", Fr, Language::Fr).as_deref().map(|d| d.starts_with("Cherche une valeur")), Some(true));
+    }
 }
