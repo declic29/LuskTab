@@ -1,0 +1,23 @@
+Dictionnaires des synonymes de Lusk Tab
+=======================================
+
+Lusk Tab intègre deux dictionnaires des synonymes au format myThes (celui de LibreOffice) :
+
+- fr/thes_fr.dat : dictionnaire des synonymes français, version 2.3, par Frédéric Labbé,
+  Indesko (Laurent Godard) et les contributeurs de Dicollecte (https://grammalecte.net/).
+  Licence : GNU LGPL 2.1 ou supérieure (fr/LGPL-2.1.txt). Fichier repris sans modification du
+  dépôt https://github.com/LibreOffice/dictionaries (dossier fr_FR/dictionaries, commit c0865a8).
+  Voir aussi fr/README_thes_fr.txt.
+
+- en/th_en_US_v2.dat.gz : thésaurus anglais tiré de WordNet 2.1, © 2005 Princeton University
+  (licence WordNet, en/WordNet_license.txt). C'est le fichier th_en_US_v2.dat du même dépôt
+  (dossier en, commit c0865a8), seulement compressé avec gzip ; « gunzip » le redonne à l'octet
+  près.
+
+Remplacer un dictionnaire des synonymes
+---------------------------------------
+
+Lusk Tab utilise à la place du dictionnaire intégré un fichier du même nom non compressé
+(thes_fr.dat ou th_en_US_v2.dat) placé dans un dossier « dictionnaires » à côté du programme,
+ou dans %APPDATA%\LuskTab\dictionaries sous Windows. On peut ainsi installer une version plus
+récente ou modifiée sans recompiler Lusk Tab.

@@ -139,7 +139,7 @@ pub fn editor(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog, confirm: &m
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(3.0, 3.0);
         for (label, snippet, tip) in QUICK {
-            let b = ui.add(egui::Button::new(*label).min_size(vec2(30.0, 22.0))).on_hover_text(*tip);
+            let b = ui.add(egui::Button::new(*label).min_size(vec2(30.0, 22.0))).on_hover_text(crate::i18n::tr(ui, tip));
             if b.clicked() {
                 insert_snippet(ui.ctx(), edit_id, &mut text, snippet);
             }
@@ -165,13 +165,13 @@ pub fn editor(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog, confirm: &m
     match &pv.result {
         Err(e) if !text.trim().is_empty() => {
             let msg = match e.char_pos(&text) {
-                Some(p) => format!("Error at character {p}: {}", e.message),
+                Some(p) => crate::i18n::tr(ui, "Error at character {p}: {message}").replace("{p}", &p.to_string()).replace("{message}", &e.message),
                 None => e.message.clone(),
             };
             ui.colored_label(t.danger, msg);
         }
         _ => {
-            ui.label(egui::RichText::new("Preview").color(t.text_dim));
+            ui.label(egui::RichText::new(crate::i18n::tr(ui, "Preview")).color(t.text_dim));
         }
     }
     // The preview card is the sheet's colour, with the sheet's ink, in both themes.
@@ -186,7 +186,7 @@ pub fn editor(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog, confirm: &m
             paint_at(&ui.painter().with_clip_rect(card), o, list, t.cell_text, s);
         }
         _ => {
-            let hint = if text.trim().is_empty() { "Type an equation in LaTeX, such as x^2 + y^2 = r^2" } else { "" };
+            let hint = if text.trim().is_empty() { crate::i18n::tr(ui, "Type an equation in LaTeX, such as x^2 + y^2 = r^2") } else { "" };
             ui.painter().text(card.center(), egui::Align2::CENTER_CENTER, hint, theme::ui_font(12.0), t.sheet_control_text);
         }
     }
@@ -194,11 +194,14 @@ pub fn editor(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog, confirm: &m
     let valid = pv.result.as_ref().is_ok_and(|l| !l.items.is_empty());
     let cmd_enter = ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, Key::Enter));
     ui.allocate_ui_with_layout(vec2(ui.available_width(), 28.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        let ok = ui.add_enabled(valid, egui::Button::new(egui::RichText::new("OK").color(t.on_accent)).fill(t.accent).min_size(vec2(64.0, 0.0)));
+        let ok = ui.add_enabled(
+            valid,
+            egui::Button::new(egui::RichText::new(crate::i18n::tr(ui, "OK")).color(t.on_accent)).fill(t.accent).min_size(vec2(64.0, 0.0)),
+        );
         if ok.clicked() || (valid && cmd_enter) {
             *confirm = true;
         }
-        if ui.add(egui::Button::new("Cancel").min_size(vec2(64.0, 0.0))).clicked() {
+        if ui.add(egui::Button::new(crate::i18n::tr(ui, "Cancel")).min_size(vec2(64.0, 0.0))).clicked() {
             *open = false;
         }
         let verb = if d.command == Some("equation.edit") { "apply" } else { "insert" };

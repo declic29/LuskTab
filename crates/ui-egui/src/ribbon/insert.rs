@@ -21,7 +21,7 @@ pub(super) fn insert(app: &mut SheetApp, ui: &mut Ui) {
     pic.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), "Pictures"));
     egui::Popup::menu(&pic).show(|ui| {
         for (label, placement) in [("Place in Cell", "cell"), ("Place over Cells", "overCells")] {
-            if ui.button(label).clicked() {
+            if ui.button(crate::i18n::tr(ui, label)).clicked() {
                 app.open_dialog("insertPicture", json!({"placement": placement}));
                 ui.close();
             }
@@ -39,7 +39,7 @@ pub(super) fn insert(app: &mut SheetApp, ui: &mut Ui) {
             ("Arrow", "arrow"),
             ("Text Box", "textBox"),
         ] {
-            if ui.button(label).clicked() {
+            if ui.button(crate::i18n::tr(ui, label)).clicked() {
                 act(app, "insert.shape", json!({"kind": kind}));
             }
         }
@@ -55,7 +55,7 @@ pub(super) fn insert(app: &mut SheetApp, ui: &mut Ui) {
                     ui.painter().rect_filled(r, 4.0, Tokens::get(ui.ctx()).hover);
                 }
                 icons::paint(ui.painter(), r.shrink(6.0), *icon, Tokens::get(ui.ctx()).text);
-                if resp.on_hover_text(*name).clicked() {
+                if resp.on_hover_text(crate::i18n::tr(ui, name)).clicked() {
                     act(app, "insert.icons", json!({"name": name}));
                     ui.close();
                 }
@@ -108,7 +108,7 @@ pub(super) fn insert(app: &mut SheetApp, ui: &mut Ui) {
                 let forced_c = invoke(app, cid);
                 egui::Popup::menu(&r).open_memory(popup_command(forced_c, r.clicked())).show(|ui| {
                     for (label, k, s) in &subs {
-                        if ui.button(*label).clicked() {
+                        if ui.button(crate::i18n::tr(ui, label)).clicked() {
                             act(app, "insert.chart", json!({"type": k, "subtype": s}));
                         }
                     }
@@ -144,7 +144,7 @@ pub(super) fn insert(app: &mut SheetApp, ui: &mut Ui) {
                 let forced_c = invoke(app, cid);
                 egui::Popup::menu(&r).open_memory(popup_command(forced_c, r.clicked())).show(|ui| {
                     for (label, k, s) in &subs {
-                        if ui.button(*label).clicked() {
+                        if ui.button(crate::i18n::tr(ui, label)).clicked() {
                             act(app, "insert.chart", json!({"type": k, "subtype": s}));
                         }
                     }
@@ -161,7 +161,7 @@ pub(super) fn insert(app: &mut SheetApp, ui: &mut Ui) {
     anchor_keytip(app, ui, &sp, &["dialog:sparkline"]);
     egui::Popup::menu(&sp).show(|ui| {
         for (label, kind) in [("Line", "line"), ("Column", "column"), ("Win/Loss", "winLoss")] {
-            if ui.button(label).clicked() {
+            if ui.button(crate::i18n::tr(ui, label)).clicked() {
                 app.open_dialog("sparkline", json!({"type": kind}));
             }
         }
@@ -245,7 +245,9 @@ pub(super) fn insert(app: &mut SheetApp, ui: &mut Ui) {
                 "✓", "★", "½", "¼",
             ] {
                 // No bundled face has ✓: the button paints a code-drawn check instead of a tofu box.
-                if crate::widgets::glyph_button(ui, ch.chars().next().unwrap_or('?'), &format!("Insert {ch}")).clicked() {
+                if crate::widgets::glyph_button(ui, ch.chars().next().unwrap_or('?'), &crate::i18n::tr(ui, "Insert {ch}").replace("{ch}", ch))
+                    .clicked()
+                {
                     act(app, "insert.symbol", json!({"char": ch}));
                 }
             }

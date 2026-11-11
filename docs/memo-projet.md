@@ -90,8 +90,27 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   accentués, dans la langue choisie dans Fichier › Options › « Langue du dictionnaire »
   (Français par défaut, Brezhoneg, English US/UK ; préférence `spellingLanguage`, commande
   `review.spellingLanguage`). Les mots tout en capitales (TVA, SIRET) sont ignorés. Le dictionnaire
-  personnel (Ajouter au dictionnaire) est inchangé. Le dictionnaire des synonymes lit encore la
-  liste du système (anglais).
+  personnel (Ajouter au dictionnaire) est inchangé.
+- 11 novembre 2026, **dictionnaire des synonymes** : Révision › Synonymes (Maj+F7) ouvre la
+  fenêtre « Dictionnaire des synonymes » : les sens du mot de la cellule active avec leurs
+  synonymes, double-clic pour chercher un synonyme, « Insérer » pour remplacer le mot dans la
+  cellule. Français : thésaurus Dicollecte 2.3 de LibreOffice (`assets/thesaurus/fr/thes_fr.dat`,
+  LGPL 2.1, intégré tel quel) ; anglais : WordNet (`assets/thesaurus/en/th_en_US_v2.dat.gz`,
+  compressé). Pas de thésaurus breton libre. Un `thes_fr.dat` placé dans un dossier
+  `dictionnaires` à côté du programme remplace celui qui est intégré (obligation de la LGPL,
+  expliquée dans `assets/thesaurus/LISEZ-MOI.txt`). Code : `crates/proof/src/thesaurus.rs`,
+  commande `review.thesaurus`.
+- 11 novembre 2026, **relecture de l'interface française** : les 735 textes que le catalogue
+  français n'avait pas sont traduits (vocabulaire d'Excel en français), et environ 300 textes
+  écrits en dur dans le code passent maintenant par la traduction (fenêtres Rechercher,
+  Orthographe, Solveur, Analyse de données, contrôles de formulaire, éditeur de macros, volets,
+  menus du ruban, barre d'état « Moyenne : … Nombre : … Somme : … », options de recopie,
+  filtre « (Sélectionner tout) »…), avec environ 480 traductions de plus. Outils :
+  `crate::i18n::tr(ui, "…")` dans le code d'affichage, `crate::i18n::tr_now("…")` ailleurs ;
+  les phrases avec une valeur utilisent des clés à emplacement (`"Average: {value}"`).
+  `cargo xtask i18n-report` donne « fr: 0 missing ». Restent en anglais : les messages techniques
+  du canal de pilotage (agents, captures d'écran) et les intitulés que l'Analyse de données écrit
+  dans les cellules des rapports (Moyenne, Erreur-type…), qui viennent du moteur.
 
 ## À faire (dans l'ordre du cahier des charges)
 
@@ -99,12 +118,12 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
    `ArtCraft\GridCraft`, éditeur), macOS (`package.sh`, nom de l'app, DMG : le fond
    `packaging/macos/dmg/background.svg` pointait vers l'ancienne icône SVG, à refaire),
    `sign.ps1`, `flatpak-oci.sh`.
-2. Interface française relue, audit des textes (les noms des fonctions en français sont faits).
-3. Synonymes en français (le dictionnaire des synonymes lit encore la liste anglaise du système).
-4. Accueil avec le renard, page Mises à jour reliée à `declic29/LuskTab`, OneDrive et Google Drive.
-5. Aide en français et page Confidentialité (après un audit réseau).
-6. Installateurs en français et workflow « Publication » (repris de Lusk Texte).
-7. Version 1.0.0.
+2. Intitulés des rapports de l'Analyse de données et du Solveur en français (écrits par le
+   moteur dans les cellules).
+3. Accueil avec le renard, page Mises à jour reliée à `declic29/LuskTab`, OneDrive et Google Drive.
+4. Aide en français et page Confidentialité (après un audit réseau).
+5. Installateurs en français et workflow « Publication » (repris de Lusk Texte).
+6. Version 1.0.0.
 
 ## Façon de travailler avec Claude
 

@@ -76,6 +76,7 @@ pub mod patterns;
 pub mod pl;
 pub mod pt;
 pub mod ru;
+pub mod thesaurus;
 pub mod tr;
 pub mod vi;
 

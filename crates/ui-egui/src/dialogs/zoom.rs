@@ -33,7 +33,7 @@ pub(super) fn zoom(ui: &mut egui::Ui, d: &mut Dialog, confirm: &mut bool, open: 
         if ui.add(egui::DragValue::new(&mut percent).range(10..=400).speed(1.0)).changed() {
             d.set_value("percent", json!(percent));
         }
-        ui.label("%");
+        ui.label(crate::i18n::tr(ui, "%"));
     });
     ok_cancel(ui, confirm, open);
 }

@@ -1,10 +1,8 @@
 //! Spelling (Lusk Tab): checks text cells with the dictionaries built into the program (French,
 //! Breton and English, from Lusk Texte's `gridcraft-proof`), in the language chosen in
 //! File › Options (`spellingLanguage`, French by default), plus a user dictionary kept in the
-//! engine preferences. The thesaurus still reads the system word list (`/usr/share/dict/words`).
-
-use std::collections::HashSet;
-use std::sync::OnceLock;
+//! engine preferences. The thesaurus gives synonyms by meaning from the French (Dicollecte) and
+//! English (WordNet) thesauri built into `gridcraft-proof`, in the same language.
 
 use gridcraft_core::{RangeRef, Value};
 use gridcraft_proof::ProofLang;
@@ -23,33 +21,9 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(query "review.spelling", "Spelling", ["Review", "Proofing"], Some("F7"), "{range?, sheet?} → misspelled words with cells and suggestions", has_doc, spelling),
         cmd!(noundo "review.addToDictionary", "Add to Dictionary", [], None, "{word}", has_doc, add_word),
         cmd!("review.changeSpelling", "Change", [], None, "{cell, word, to, all?: bool}", has_doc, change),
-        cmd!(query "review.thesaurus", "Thesaurus", ["Review", "Proofing"], None, "{word} → related words (words sharing the stem in the dictionary)", has_doc, thesaurus),
+        cmd!(query "review.thesaurus", "Thesaurus", ["Review", "Proofing"], None, "{word?: text (default: the first word of the active cell)} → {word, lang, meanings: [{part, synonyms}]} (synonyms by meaning, in the dictionary language)", has_doc, thesaurus),
         cmd!(query "review.spellingLanguage", "Dictionary Language", [], None, "{lang?: \"fr\" | \"br\" | \"en-US\" | \"en-GB\"} → the language spelling is checked in", always, spelling_language),
     ]
-}
-
-/// The system word list, for the thesaurus only.
-fn dictionary() -> &'static HashSet<String> {
-    static DICT: OnceLock<HashSet<String>> = OnceLock::new();
-    DICT.get_or_init(|| {
-        #[cfg(target_arch = "wasm32")]
-        {
-            HashSet::new()
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let mut set = HashSet::new();
-            for path in ["/usr/share/dict/words", "/usr/share/dict/american-english", "/usr/share/dict/british-english"] {
-                if let Ok(text) = std::fs::read_to_string(path) {
-                    for w in text.lines().take(2_000_000) {
-                        set.insert(w.trim().to_lowercase());
-                    }
-                    break;
-                }
-            }
-            set
-        }
-    })
 }
 
 /// The language spelling is checked in.
@@ -128,16 +102,23 @@ fn change(s: &mut Session, p: &Json) -> Result<Json> {
     s.execute("cell.set", json!({"cell": c.a1(), "input": text.replacen(&word, &to, 1)}))
 }
 
-fn thesaurus(_: &mut Session, p: &Json) -> Result<Json> {
-    let w = str_param(p, "word").unwrap_or("").to_lowercase();
-    if w.len() < 3 {
-        return Ok(json!([]));
-    }
-    let stem: String = w.chars().take(w.chars().count().saturating_sub(2).max(3)).collect();
-    let mut related: Vec<&String> = dictionary().iter().filter(|d| d.starts_with(&stem) && **d != w && d.len() <= w.len() + 4).collect();
-    related.sort();
-    related.truncate(20);
-    Ok(json!(related))
+fn thesaurus(s: &mut Session, p: &Json) -> Result<Json> {
+    let lang = proof_lang(s);
+    let word = match str_param(p, "word") {
+        Some(w) => w.trim().to_string(),
+        None => {
+            let d = s.doc()?;
+            let text =
+                d.wb.active()
+                    .and_then(|sh| sh.cell(d.selection.active))
+                    .and_then(|c| if let Value::Text(t) = &c.value { Some(t.to_string()) } else { None })
+                    .unwrap_or_default();
+            text.split(|ch: char| !(ch.is_alphabetic() || ch == '\'' || ch == '’' || ch == '-')).find(|w| !w.is_empty()).unwrap_or("").to_string()
+        }
+    };
+    let meanings: Vec<Json> =
+        gridcraft_proof::thesaurus::synonyms(&word, lang).into_iter().map(|m| json!({"part": m.part, "synonyms": m.synonyms})).collect();
+    Ok(json!({"word": word, "lang": s.prefs.spelling_language, "available": gridcraft_proof::thesaurus::has_thesaurus(lang), "meanings": meanings}))
 }
 
 #[cfg(test)]
@@ -185,5 +166,20 @@ mod tests {
         assert_eq!(words(&mut s), ["Kerlusk"]);
         s.execute("review.addToDictionary", json!({"word": "kerlusk"})).unwrap();
         assert!(words(&mut s).is_empty());
+    }
+
+    #[test]
+    fn thesaurus_in_the_dictionary_language() {
+        let mut s = session(&["Ma maison"]);
+        let out = s.execute("review.thesaurus", json!({})).unwrap();
+        assert_eq!(out["word"], "Ma");
+        let out = s.execute("review.thesaurus", json!({"word": "maison"})).unwrap();
+        assert!(out["meanings"].as_array().unwrap().iter().any(|m| m["synonyms"].as_array().unwrap().iter().any(|w| w == "demeure")), "{out}");
+        s.execute("review.spellingLanguage", json!({"lang": "en-GB"})).unwrap();
+        let out = s.execute("review.thesaurus", json!({"word": "happy"})).unwrap();
+        assert!(out["meanings"].as_array().unwrap().iter().any(|m| m["synonyms"].as_array().unwrap().iter().any(|w| w == "glad")), "{out}");
+        s.execute("review.spellingLanguage", json!({"lang": "br"})).unwrap();
+        let out = s.execute("review.thesaurus", json!({"word": "ti"})).unwrap();
+        assert_eq!(out["available"], false);
     }
 }

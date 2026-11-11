@@ -9,7 +9,7 @@ pub(super) fn manage_rules(app: &mut SheetApp, ui: &mut egui::Ui) {
     // serialised every rule and journaled a step 60 times a second.
     let count = app.session.active().and_then(|d| d.wb.active()).map_or(0, |sh| sh.cond_formats.len());
     if count == 0 {
-        ui.label("There are no conditional formatting rules on this sheet.");
+        ui.label(crate::i18n::tr(ui, "There are no conditional formatting rules on this sheet."));
         return;
     }
     let mut action: Option<Json> = None;
@@ -21,14 +21,15 @@ pub(super) fn manage_rules(app: &mut SheetApp, ui: &mut egui::Ui) {
             let kind = serde_json::to_value(&cf.rule).ok().and_then(|r| r.as_object().and_then(|o| o.keys().next().cloned())).unwrap_or_default();
             let ranges = cf.ranges.iter().map(|r| r.a1()).collect::<Vec<_>>().join(",");
             ui.horizontal(|ui| {
-                ui.label(format!("{}. {kind}  applies to {ranges}", i + 1));
+                let kind = crate::i18n::tr(ui, rule_name(&kind));
+                ui.label(format!("{}. {kind}  {} {ranges}", i + 1, crate::i18n::tr(ui, "applies to")));
                 if ui.small_button("▲").clicked() {
                     action = Some(json!({"moveUp": i}));
                 }
                 if ui.small_button("▼").clicked() {
                     action = Some(json!({"moveDown": i}));
                 }
-                if ui.small_button("Delete").clicked() {
+                if ui.small_button(crate::i18n::tr(ui, "Delete")).clicked() {
                     action = Some(json!({"delete": i}));
                 }
             });
@@ -36,5 +37,24 @@ pub(super) fn manage_rules(app: &mut SheetApp, ui: &mut egui::Ui) {
     });
     if let Some(params) = action {
         app.run_or_alert("home.manageRules", params);
+    }
+}
+
+/// The rule kind as the Conditional Formatting menus name it (the serialized variant name when
+/// it has no menu name).
+fn rule_name(kind: &str) -> &str {
+    match kind {
+        "CellIs" => "Cell Values",
+        "Expression" => "Formula:",
+        "ContainsText" | "NotContainsText" | "BeginsWith" | "EndsWith" => "Text that Contains…",
+        "Blanks" | "NoBlanks" => "Blanks",
+        "Errors" | "NoErrors" => "Errors",
+        "Duplicate" | "Unique" => "Duplicate Values…",
+        "Top10" | "AboveAverage" => "Top/Bottom Rules",
+        "TimePeriod" => "A Date Occurring…",
+        "ColorScale" => "Color Scales",
+        "DataBar" => "Data Bars",
+        "IconSet" => "Icon Sets",
+        other => other,
     }
 }

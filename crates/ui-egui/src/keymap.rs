@@ -279,6 +279,7 @@ fn lookup_function_shortcuts(ctx: LookupContext) -> Option<Shortcut> {
         F5 if plain && s => Shortcut::Dialog("find", json!({})),
         F5 if plain => Shortcut::Dialog("goTo", json!({})),
         F7 if plain && !s => Shortcut::Dialog("spelling", json!({})),
+        F7 if plain && s => Shortcut::Dialog("thesaurus", json!({})),
         F9 if plain && s => run("formulas.calculateSheet"),
         F10 if plain && s => Shortcut::ContextMenu,
         F11 if plain && s => run("home.insertSheet"),

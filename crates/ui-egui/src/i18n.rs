@@ -297,6 +297,21 @@ fn lang_key() -> egui::Id {
 }
 
 /// The language the current frame is drawing in. `En` when unset.
+/// The language of the last frame drawn, for text built away from a `Ui` (a macro step's
+/// summary, a run's outcome). English until a frame sets it.
+static LAST_LANGUAGE: std::sync::RwLock<Language> = std::sync::RwLock::new(Language::En);
+
+/// `text` in the language of the last frame drawn (English if untranslated).
+pub(crate) fn tr_now(text: &str) -> &str {
+    LAST_LANGUAGE.read().map_or(Language::En, |l| *l).tr(text)
+}
+
+/// `text` in the language of the frame `ui` belongs to (English if untranslated). For labels
+/// written directly in a widget call: `ui.button(i18n::tr(ui, "Apply"))`.
+pub(crate) fn tr<'a>(ui: &egui::Ui, text: &'a str) -> &'a str {
+    current(ui.ctx()).tr(text)
+}
+
 pub fn current(ctx: &egui::Context) -> Language {
     ctx.data(|d| d.get_temp(lang_key())).unwrap_or_default()
 }
@@ -304,6 +319,9 @@ pub fn current(ctx: &egui::Context) -> Language {
 /// Sets the language for the current frame; call once per frame before anything is drawn.
 pub fn set_current(ctx: &egui::Context, language: Language) {
     ctx.data_mut(|d| d.insert_temp(lang_key(), language));
+    if let Ok(mut last) = LAST_LANGUAGE.write() {
+        *last = language;
+    }
     if DISPLAY_WORDS.load(std::sync::atomic::Ordering::Relaxed) {
         apply_display_words(language);
     }

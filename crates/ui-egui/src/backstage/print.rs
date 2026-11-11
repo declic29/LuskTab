@@ -84,7 +84,8 @@ pub(super) fn print(app: &mut SheetApp, ui: &mut Ui, bs: &mut Backstage, out: &m
             dim(ui, &format!("{sheet} · {range}"));
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.add_enabled(bs.preview_page > 0, egui::Button::new("◀")).on_hover_text(lang.tr("Previous page")).clicked() {
+                if ui.add_enabled(bs.preview_page > 0, egui::Button::new(crate::i18n::tr(ui, "◀"))).on_hover_text(lang.tr("Previous page")).clicked()
+                {
                     bs.preview_page = bs.preview_page.saturating_sub(1);
                 }
                 let text = lang
@@ -92,7 +93,8 @@ pub(super) fn print(app: &mut SheetApp, ui: &mut Ui, bs: &mut Backstage, out: &m
                     .replace("{page}", &(bs.preview_page + 1).to_string())
                     .replace("{pages}", &pages.len().to_string());
                 ui.label(text);
-                if ui.add_enabled(bs.preview_page < last, egui::Button::new("▶")).on_hover_text(lang.tr("Next page")).clicked() {
+                if ui.add_enabled(bs.preview_page < last, egui::Button::new(crate::i18n::tr(ui, "▶"))).on_hover_text(lang.tr("Next page")).clicked()
+                {
                     bs.preview_page = (bs.preview_page + 1).min(last);
                 }
             });

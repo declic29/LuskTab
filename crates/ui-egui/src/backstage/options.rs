@@ -188,7 +188,9 @@ fn iteration_options(app: &mut SheetApp, ui: &mut Ui, lang: Language, calc: &gri
                 ui.end_row();
                 let label = ui.label(lang.tr("Maximum Change:"));
                 let id = ui.make_persistent_id("backstage_max_change");
-                let committed = crate::widgets::committed_text(ui, id, &calc.max_change.to_string(), Some(80.0));
+                // Shown with the decimal separator it is typed with (0,001 in French).
+                let shown = calc.max_change.to_string().replace('.', &lang.formula_locale().decimal_separator().to_string());
+                let committed = crate::widgets::committed_text(ui, id, &shown, Some(80.0));
                 if let Some(response) = ui.ctx().read_response(id) {
                     response.labelled_by(label.id);
                 }

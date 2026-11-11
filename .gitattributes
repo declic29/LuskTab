@@ -2,3 +2,4 @@
 assets/dictionaries/** -text
 assets/spelling/** -text
 assets/hyphenation/** -text
+assets/thesaurus/** -text

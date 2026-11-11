@@ -359,7 +359,7 @@ impl Dialog {
                     vec![
                         Number { key: "to", label: "Before sheet (position, 0 = first):" },
                         Check { key: "copy", label: "Create a copy" },
-                        Note(format!("Sheets: {}", sheets.join(", "))),
+                        Note(app.ui.language.tr("Sheets: {sheets}").replace("{sheets}", &sheets.join(", "))),
                     ],
                     json!({"to": 0, "copy": false}),
                 );
@@ -412,7 +412,7 @@ impl Dialog {
                     "Allow Edit Ranges",
                     "review.allowEditRanges",
                     vec![
-                        Note(format!("Ranges that stay editable when the sheet is protected:\n{summary}")),
+                        Note(format!("{}\n{summary}", app.ui.language.tr("Ranges that stay editable when the sheet is protected:"))),
                         Choice {
                             key: "action",
                             label: "Action",
@@ -1076,6 +1076,13 @@ impl Dialog {
             "evaluateFormula" => {
                 let mut d = Dialog::custom("evaluateFormula", "Evaluate Formula", json!({}));
                 d.result = app.session.run("formulas.evaluateFormula", json!({})).ok();
+                d
+            }
+            "thesaurus" => {
+                let r = app.session.run("review.thesaurus", json!({})).unwrap_or_else(|e| json!({"error": e}));
+                let word = r["word"].clone();
+                let mut d = Dialog::custom("thesaurus", "Thesaurus", json!({"word": word, "looked": word}));
+                d.result = Some(r);
                 d
             }
             "spelling" => {

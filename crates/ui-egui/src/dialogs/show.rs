@@ -10,7 +10,7 @@ use super::insert_function::insert_function;
 use super::names::{name_manager, paste_name};
 use super::paste::{paste_special, paste_special_shortcuts};
 use super::ref_edit::{RefLabel, SHEET_DELETED, end_pick, home_sheet_deleted, place_window, ref_edit, window_shown};
-use super::spelling::spelling;
+use super::spelling::{spelling, thesaurus};
 use super::zoom::zoom;
 use super::{Dialog, Field, Json, Key, Map, RefPick, SheetApp, json, vec2};
 use gridcraft_engine::model::PageOrder;
@@ -204,15 +204,16 @@ pub fn show(app: &mut SheetApp, ctx: &egui::Context) {
                 "solver" => solver(app, ui, &mut d, &mut confirm, &mut open),
                 "solverResults" => solver_results(app, ui, &mut d, &mut open),
                 "spelling" => spelling(app, ui, &mut d, &mut open),
+                "thesaurus" => thesaurus(app, ui, &mut d, &mut open),
                 "assignAction" => crate::control_ui::assign_dialog(app, ui, &mut d, &mut open),
                 "formatControl" => crate::control_ui::format_dialog(app, ui, &mut d, &mut open),
                 "controlQuestion" => crate::control_ui::question_dialog(app, ui, &mut d, &mut open),
                 "agents" => {
-                    ui.label("Lusk Tab is fully drivable by agents. Every menu item, button and gesture is a command:");
+                    ui.label(crate::i18n::tr(ui, "Lusk Tab is fully drivable by agents. Every menu item, button and gesture is a command:"));
                     ui.add_space(4.0);
                     ui.monospace("gridcraft --control 7979        # JSON-lines control channel\ngridcraft-cli mcp --connect 7979   # MCP bridged to this window\ngridcraft-cli mcp                   # headless MCP server");
                     ui.add_space(4.0);
-                    ui.label(format!("{} engine commands are available.", gridcraft_engine::command_specs().len()));
+                    ui.label(crate::i18n::tr(ui, "{count} engine commands are available.").replace("{count}", &gridcraft_engine::command_specs().len().to_string()));
                 }
                 "about" => about(ui, &mut d),
                 "journal" => {
@@ -252,16 +253,16 @@ pub fn show(app: &mut SheetApp, ctx: &egui::Context) {
                     }
                     if app.services.pick_picture_async.is_some() {
                         let name = d.values.get("alt").and_then(Json::as_str).unwrap_or("No picture selected");
-                        ui.label(name);
+                        ui.label(crate::i18n::tr(ui, name));
                     } else {
-                        ui.label("Picture file path (PNG or JPEG):");
+                        ui.label(crate::i18n::tr(ui, "Picture file path (PNG or JPEG):"));
                         let mut path = d.values.get("path").and_then(Json::as_str).unwrap_or("").to_string();
                         if ui.text_edit_singleline(&mut path).changed() {
                             d.values.remove("base64");
                             d.values.insert("path".into(), json!(path));
                         }
                     }
-                    if (app.services.pick_picture.is_some() || app.services.pick_picture_async.is_some()) && ui.button("Browse…").clicked() {
+                    if (app.services.pick_picture.is_some() || app.services.pick_picture_async.is_some()) && ui.button(crate::i18n::tr(ui, "Browse…")).clicked() {
                         if let Some(start) = &app.services.pick_picture_async {
                             let inbox = crate::Inbox::default();
                             start(inbox.clone());
@@ -275,13 +276,13 @@ pub fn show(app: &mut SheetApp, ctx: &egui::Context) {
                             d.values.insert("path".into(), json!(path));
                         }
                     }
-                    ui.label("Description (optional):");
+                    ui.label(crate::i18n::tr(ui, "Description (optional):"));
                     let mut alt = d.values.get("alt").and_then(Json::as_str).unwrap_or("").to_string();
                     if ui.text_edit_singleline(&mut alt).changed() {
                         d.values.insert("alt".into(), json!(alt));
                     }
                     if d.values.get("placement").and_then(Json::as_str) == Some("cell") {
-                        ui.label(egui::RichText::new("Fits inside the selected cell and moves with its content.").small());
+                        ui.label(egui::RichText::new(crate::i18n::tr(ui, "Fits inside the selected cell and moves with its content.")).small());
                     }
                     ok_cancel(ui, &mut confirm, &mut open);
                 }
@@ -310,7 +311,7 @@ pub fn show(app: &mut SheetApp, ctx: &egui::Context) {
                 }
                 "saveCopy" => {
                     let fmt = d.values.get("format").and_then(Json::as_str).unwrap_or("xlsx").to_string();
-                    ui.label(format!("Save a copy as .{fmt}"));
+                    ui.label(crate::i18n::tr(ui, "Save a copy as .{format}").replace("{format}", &fmt));
                     let mut path = d.values.get("path").and_then(Json::as_str).unwrap_or("").to_string();
                     ui.text_edit_singleline(&mut path);
                     d.values.insert("path".into(), json!(path.clone()));
@@ -338,22 +339,23 @@ pub fn show(app: &mut SheetApp, ctx: &egui::Context) {
                     }
                 }
                 "saveChanges" => {
-                    ui.label(format!("Do you want to save the changes you made to {}?", d.values.get("title").and_then(Json::as_str).unwrap_or("this workbook")));
+                    let title = d.values.get("title").and_then(Json::as_str).unwrap_or(crate::i18n::tr(ui, "this workbook")).to_string();
+                    ui.label(crate::i18n::tr(ui, "Do you want to save the changes you made to {title}?").replace("{title}", &title));
                     let quitting = d.values.get("quit").and_then(Json::as_bool) == Some(true);
                     ui.horizontal(|ui| {
                         for (label, answer) in
                             [("Don't Save", crate::SaveAnswer::DontSave), ("Cancel", crate::SaveAnswer::Cancel), ("Save", crate::SaveAnswer::Save)]
                         {
-                            if ui.button(label).clicked() && app.answer_save_changes(answer, quitting, ui.ctx()) {
+                            if ui.button(crate::i18n::tr(ui, label)).clicked() && app.answer_save_changes(answer, quitting, ui.ctx()) {
                                 open = false;
                             }
                         }
                     });
                 }
                 "start" => {
-                    ui.heading("Start a new workbook");
+                    ui.heading(crate::i18n::tr(ui, "Start a new workbook"));
                     ui.horizontal_wrapped(|ui| {
-                        if ui.button("Blank workbook").clicked() {
+                        if ui.button(crate::i18n::tr(ui, "Blank workbook")).clicked() {
                             app.run_or_alert("file.new", json!({}));
                             open = false;
                         }
@@ -365,14 +367,14 @@ pub fn show(app: &mut SheetApp, ctx: &egui::Context) {
                         }
                     });
                     ui.separator();
-                    ui.label(egui::RichText::new("Recent").strong());
+                    ui.label(egui::RichText::new(crate::i18n::tr(ui, "Recent")).strong());
                     for path in app.ui.recent.clone() {
                         if ui.link(&path).clicked() {
                             app.open_path(&path);
                             open = false;
                         }
                     }
-                    if ui.button("Open…").clicked() {
+                    if ui.button(crate::i18n::tr(ui, "Open…")).clicked() {
                         app.open_dialog("open", json!({}));
                         open = false;
                     }
