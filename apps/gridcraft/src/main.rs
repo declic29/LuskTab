@@ -1,6 +1,9 @@
 //! GridCraft desktop app.
 //!
-//! Usage: `gridcraft [--control <port> [--control-token <token>]] [--sample <name>] [files…]`
+//! Usage: `gridcraft [--control <port> [--control-token <token>]] [--sample <name>] [--no-splash] [files…]`
+//!
+//! Lusk Tab opens with a start-up screen (`gridcraft_ui_egui::splash`); `--no-splash` or
+//! `LUSK_NO_SPLASH=1` skips it.
 //!
 //! `--control <port>` (or `GRIDCRAFT_CONTROL_PORT`) starts a localhost JSON-lines control
 //! server: `{"id":1,"method":"ui.inspect","params":{}}` → `{"id":1,"ok":true,"result":…}`.
@@ -27,22 +30,33 @@ use gridcraft_ui_egui::doc_windows::DocWindows;
 use gridcraft_ui_egui::{Services, SheetApp};
 use serde_json::json;
 
-/// The app, its native window per workbook window, and (macOS) the menu bar and Finder events.
-struct App(SheetApp, DocWindows, #[cfg(target_os = "macos")] Option<native_menu::NativeMenu>, #[cfg(target_os = "macos")] fmv_macos_events::Inbox);
+/// The app, its native window per workbook window, the start-up screen while it shows (Lusk Tab;
+/// the window is then its own), and (macOS) the menu bar and Finder events.
+struct App(
+    SheetApp,
+    DocWindows,
+    Option<gridcraft_ui_egui::splash::Splash>,
+    #[cfg(target_os = "macos")] Option<native_menu::NativeMenu>,
+    #[cfg(target_os = "macos")] fmv_macos_events::Inbox,
+);
 
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         #[cfg(target_os = "macos")]
         {
-            if self.2.is_none() && std::env::var_os("GRIDCRAFT_NO_NATIVE_MENU").is_none() {
-                self.2 = Some(native_menu::NativeMenu::install(ctx));
+            if self.3.is_none() && std::env::var_os("GRIDCRAFT_NO_NATIVE_MENU").is_none() {
+                self.3 = Some(native_menu::NativeMenu::install(ctx));
             }
-            if let Some(m) = &mut self.2 {
+            if let Some(m) = &mut self.3 {
                 m.poll(&mut self.0, ctx, self.1.focused_viewport());
             }
-            apple_events::poll(&self.3, &mut self.0, ctx);
+            apple_events::poll(&self.4, &mut self.0, ctx);
         }
         self.0.logic(ctx);
+        // The start-up screen holds the window: its size and place aren't the workbook window's.
+        if self.2.is_some() {
+            return;
+        }
         self.1.logic(&mut self.0, ctx);
         if ctx.input(|input| input.viewport().close_requested()) && self.0.printing.busy() {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
@@ -59,7 +73,19 @@ impl eframe::App for App {
         }
     }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        if let Some(splash) = &mut self.2 {
+            if splash.ui(&mut self.0, ui) {
+                self.2 = None;
+                become_main_window(ui.ctx());
+            }
+            return;
+        }
         self.1.show(&mut self.0, ui);
+    }
+    /// Lusk Tab: transparent while the start-up screen shows (its fades and rounded corners), then
+    /// opaque, the colour of the panels.
+    fn clear_color(&self, visuals: &egui::Visuals) -> [f32; 4] {
+        if self.2.is_some() { [0.0; 4] } else { visuals.panel_fill.to_opaque().to_normalized_gamma_f32() }
     }
     fn on_exit(&mut self) {
         print::finish_pending_jobs();
@@ -78,6 +104,24 @@ impl eframe::App for App {
         #[cfg(target_os = "macos")]
         std::process::exit(0);
     }
+}
+
+/// Lusk Tab: after the start-up screen the window takes its borders back and the workbook
+/// window's size (shrunk to the screen), centred.
+fn become_main_window(ctx: &egui::Context) {
+    use egui::ViewportCommand as C;
+    let monitor = ctx.input(|i| i.viewport().monitor_size);
+    let (w, h) = monitor.map_or((1440.0, 900.0), |m| (1440.0_f32.min(m.x), 900.0_f32.min(m.y)));
+    ctx.send_viewport_cmd(C::WindowLevel(egui::WindowLevel::Normal));
+    ctx.send_viewport_cmd(C::Decorations(true));
+    ctx.send_viewport_cmd(C::Resizable(true));
+    ctx.send_viewport_cmd(C::MinInnerSize(egui::vec2(640.0, 420.0)));
+    ctx.send_viewport_cmd(C::InnerSize(egui::vec2(w, h)));
+    if let Some(m) = monitor {
+        ctx.send_viewport_cmd(C::OuterPosition(egui::pos2(((m.x - w) / 2.0).max(0.0), ((m.y - h) / 2.0).max(0.0))));
+    }
+    ctx.send_viewport_cmd(C::Focus);
+    ctx.request_repaint();
 }
 
 fn config_dir() -> Option<std::path::PathBuf> {
@@ -283,6 +327,7 @@ fn main() -> eframe::Result<()> {
     let mut control_port: Option<u16> = std::env::var("GRIDCRAFT_CONTROL_PORT").ok().and_then(|p| p.parse().ok());
     let mut control_token: Option<String> = std::env::var("GRIDCRAFT_CONTROL_TOKEN").ok();
     let mut sample: Option<String> = None;
+    let mut no_splash = std::env::var_os("LUSK_NO_SPLASH").is_some();
     let mut files: Vec<String> = Vec::new();
     let mut i = 0;
     while i < args.len() {
@@ -299,6 +344,7 @@ fn main() -> eframe::Result<()> {
                 i += 1;
                 sample = Some(args.get(i).cloned().unwrap_or_else(|| "sales".into()));
             }
+            "--no-splash" => no_splash = true,
             a if a.starts_with("-psn_") => {}
             a => files.push(a.to_string()),
         }
@@ -358,7 +404,20 @@ fn main() -> eframe::Result<()> {
         viewport = viewport.with_icon(i);
     }
     let window_builder = viewport.clone();
-    let options = eframe::NativeOptions { viewport, ..Default::default() };
+    // Lusk Tab: the start-up screen, except for agents and scripts (control channel, sample
+    // workbook, no preferences) and on macOS, where the built-in title bar is set up as the
+    // window is created.
+    let splash = cfg!(not(target_os = "macos")) && !no_splash && control_port.is_none() && sample.is_none() && prefs_enabled();
+    if splash {
+        viewport = viewport
+            .with_decorations(false)
+            .with_transparent(true)
+            .with_resizable(false)
+            .with_inner_size(gridcraft_ui_egui::splash::SIZE)
+            .with_min_inner_size(gridcraft_ui_egui::splash::SIZE)
+            .with_window_level(egui::WindowLevel::AlwaysOnTop);
+    }
+    let options = eframe::NativeOptions { viewport, centered: splash, ..Default::default() };
     #[cfg(unix)]
     let mut options = options;
     // Intel Macs: Metal's compiler aborts on wgpu's indirect-validation shaders (see graphics.rs).
@@ -382,6 +441,10 @@ fn main() -> eframe::Result<()> {
     let (options, first_backends) = {
         let mut options = options;
         let backends = graphics::configure(&mut options, backend_override);
+        // DirectX 12 shows a transparent window only through DirectComposition.
+        if splash {
+            graphics::configure_transparency(&mut options);
+        }
         (options, backends)
     };
     #[cfg(target_os = "windows")]
@@ -411,9 +474,11 @@ fn main() -> eframe::Result<()> {
                     }
                 }
                 let windows = DocWindows::new(&mut app, window_builder.clone(), DocWindows::platform_quits_with_last_window());
+                let animations = app.ui.animations;
                 Ok(Box::new(App(
                     app,
                     windows,
+                    splash.then(|| gridcraft_ui_egui::splash::Splash::new(animations)),
                     #[cfg(target_os = "macos")]
                     None,
                     #[cfg(target_os = "macos")]

@@ -118,6 +118,20 @@ pub fn configure_backends(options: &mut NativeOptions, backends: Backends) {
     }
 }
 
+/// Lusk Tab (from Lusk Texte): DirectX 12 presents through DirectComposition, the only way its
+/// swapchain can show a transparent window (the start-up screen's fades and rounded corners).
+/// wgpu's own `WGPU_DX12_PRESENTATION_SYSTEM` (`Hwnd`) still wins, as a way back if a driver
+/// misbehaves.
+#[cfg(target_os = "windows")]
+pub fn configure_transparency(options: &mut NativeOptions) {
+    if std::env::var_os("WGPU_DX12_PRESENTATION_SYSTEM").is_some() {
+        return;
+    }
+    if let WgpuSetup::CreateNew(create) = &mut options.wgpu_options.wgpu_setup {
+        create.instance_descriptor.backend_options.dx12.presentation_system = eframe::wgpu::Dx12SwapchainKind::DxgiFromVisual;
+    }
+}
+
 /// Chooses the backends ([`choose_backends`]), applies them to `options` and returns them.
 /// Without a `backend_override` this first probes DirectX 12 with a short-lived instance of its
 /// own, which is dropped before eframe creates the real one.

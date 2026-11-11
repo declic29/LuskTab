@@ -123,6 +123,16 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   renvoie aux agents (captures d'écran, saisie synthétique, impression, commandes `ui.*`) sont
   traduites au moment de l'envoi (`crates/ui-egui/src/agent_messages.rs`), dans la langue de
   l'interface ; les autres messages passent par le catalogue français.
+- 11 novembre 2026, **écran d'accueil** (repris de Lusk Texte) : au démarrage, une fenêtre
+  sans bordure apparaît en fondu avec l'image de fond (`assets/splash/accueil-lusk-tab.jpg`,
+  fournie par l'association), le logo seul (sans texte à côté, à la demande de Philippe), une
+  barre de chargement et les mentions légales (version, association loi
+  1901, © 2026 Lusk, licence MIT ou Apache 2.0), puis disparaît en fondu. La barre suit le
+  chargement de l'interface et des dictionnaires (français et synonymes, chargés en
+  arrière-plan). Pas d'écran d'accueil sur macOS, pour les agents (`--control`), avec
+  `--sample`, `--no-splash` ou `LUSK_NO_SPLASH=1`. Textes à modifier en haut de
+  `crates/ui-egui/src/splash.rs`. Photo : `cargo run -p gridcraft-ui-egui --example splash --
+  sortie.png`.
 
 ## À faire (dans l'ordre du cahier des charges)
 
