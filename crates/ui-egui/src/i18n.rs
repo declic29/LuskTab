@@ -304,6 +304,58 @@ pub fn current(ctx: &egui::Context) -> Language {
 /// Sets the language for the current frame; call once per frame before anything is drawn.
 pub fn set_current(ctx: &egui::Context, language: Language) {
     ctx.data_mut(|d| d.insert_temp(lang_key(), language));
+    if DISPLAY_WORDS.load(std::sync::atomic::Ordering::Relaxed) {
+        apply_display_words(language);
+    }
+}
+
+/// The words cells show (VRAI, #VALEUR!) and the names of new sheets and workbooks (Feuil1,
+/// Classeur1) in `language`. Called each frame once [`use_system_display`] turned it on, and by
+/// the desktop app before its first workbook is made.
+pub fn apply_display_words(language: Language) {
+    let french = language == Language::Fr;
+    gridcraft_engine::numfmt::set_french_words(french);
+    let (sheet, book) = if french { ("Feuil", "Classeur") } else { ("Sheet", "Book") };
+    gridcraft_engine::model::workbook::set_default_names(sheet, book);
+}
+
+/// Shows cells in the region `tag` (`fr-FR`), or the computer's when it is empty or unknown. Does
+/// nothing until [`use_system_display`] turned regional display on.
+pub fn apply_region(tag: &str) {
+    if !DISPLAY_WORDS.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
+    let region = gridcraft_engine::core::region::find(tag).unwrap_or_else(system_region);
+    if gridcraft_engine::numfmt::display_region().tag != region.tag {
+        gridcraft_engine::numfmt::set_display_region(region);
+    }
+}
+
+/// Whether regional display is on (the desktop and web apps).
+pub fn regional_display() -> bool {
+    DISPLAY_WORDS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Whether the interface language also chooses the words cells show (VRAI, #VALEUR!).
+static DISPLAY_WORDS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Lusk Tab: cells are shown the way the computer's regional settings write numbers and dates
+/// (`1 234,50`, `07/10/2026`), and with the interface language's words for TRUE, FALSE and the
+/// errors. The desktop and web apps call this once at start; tests and the headless tools keep
+/// GridCraft's en-US display.
+pub fn use_system_display() {
+    gridcraft_engine::numfmt::set_display_region(system_region());
+    DISPLAY_WORDS.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The computer's regional formats (Windows: Region › Regional format), best effort; en-US when
+/// unknown.
+pub fn system_region() -> &'static gridcraft_engine::core::Region {
+    #[cfg(not(target_arch = "wasm32"))]
+    let tag = sys_locale::get_locale();
+    #[cfg(target_arch = "wasm32")]
+    let tag = web_sys::window().and_then(|window| window.navigator().language());
+    tag.map_or_else(gridcraft_engine::core::region::default_region, |t| gridcraft_engine::core::region::lookup(&t))
 }
 
 /// `name` lowercased with the Latin accents that occur in language names folded away, so a

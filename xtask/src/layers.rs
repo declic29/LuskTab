@@ -29,6 +29,8 @@ pub const TABLE: &[(&str, Class)] = &[
     ("core", Class::Layer(0)),
     ("numfmt", Class::Layer(0)),
     ("pdf", Class::Layer(0)),
+    // Spelling: dictionaries and suggestions (from Lusk Texte); used by the engine.
+    ("proof", Class::Layer(0)),
     // The confined launcher for helper processes; the Python worker and the apps use it.
     ("sandbox", Class::Layer(0)),
     ("formula", Class::Layer(1)),

@@ -257,6 +257,12 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Light" => "Clair",
         "Dark" => "Sombre",
         "Interface language" => "Langue de l'interface",
+        "Regional format" => "Format régional",
+        "Dictionary language" => "Langue du dictionnaire",
+        "The built-in dictionary used by Review › Spelling" => "Le dictionnaire intégré utilisé par Révision › Orthographe",
+        "How numbers and dates are shown and typed (1 234,50 ; 25/12/2026)" => {
+            "Façon d'afficher et de taper les nombres et les dates (1 234,50 ; 25/12/2026)"
+        }
         "Interface size" => "Taille de l'interface",
         "Auto" => "Automatique",
         "Drag to freeze columns" => "Faites glisser pour figer les colonnes",

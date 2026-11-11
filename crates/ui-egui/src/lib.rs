@@ -126,6 +126,10 @@ pub struct UiState {
     /// [`INTERFACE_SCALE_MIN`]..=[`INTERFACE_SCALE_MAX`]; a malformed saved value reads as 100.
     #[serde(deserialize_with = "lenient_interface_scale")]
     pub interface_scale: u16,
+    /// Lusk Tab: the regional format cells are shown and typed in (File ▸ Options ▸ General), as a
+    /// region tag (`fr-FR`); empty follows the computer's regional settings. Used only once the
+    /// app turned regional display on (`i18n::use_system_display`).
+    pub region: String,
 }
 
 pub const INTERFACE_SCALE_MIN: u16 = 75;
@@ -161,6 +165,7 @@ impl Default for UiState {
             keytip_invoke_next: None,
             language: i18n::Language::En,
             interface_scale: 100,
+            region: String::new(),
         }
     }
 }

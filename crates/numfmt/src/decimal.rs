@@ -249,7 +249,7 @@ pub fn format_general_fit(n: f64, max_chars: usize) -> Option<String> {
             s.push_str(sign);
             s.push_str(if i.is_empty() { "0" } else { &i });
             if !ft.is_empty() {
-                s.push('.');
+                s.push(crate::display::decimal());
                 s.push_str(ft);
             }
             if s.chars().count() <= max_chars {
@@ -273,7 +273,7 @@ pub fn format_general_fit(n: f64, max_chars: usize) -> Option<String> {
         s.push_str(sign);
         s.push_str(if i.is_empty() { "0" } else { &i });
         if !ft.is_empty() {
-            s.push('.');
+            s.push(crate::display::decimal());
             s.push_str(ft);
         }
         let _ = write!(s, "E{}{:02}", if e < 0 { '-' } else { '+' }, e.unsigned_abs());

@@ -1,0 +1,17 @@
+[package]
+name = "gridcraft-proof"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Lusk Tab proofing (from Lusk Texte / WordCraft): spelling and suggestions with built-in French, Breton and English dictionaries"
+
+[lints]
+workspace = true
+
+[dependencies]
+log = { workspace = true }
+miniz_oxide = "0.9"
+unicode-normalization = "0.1"
+
+[dev-dependencies]
+proptest = "1"

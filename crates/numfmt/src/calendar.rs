@@ -59,6 +59,21 @@ impl Calendar {
 }
 
 fn gregorian_date(dt: &DateTime) -> CalendarDate {
+    let region = crate::display::display_region();
+    if region.tag != gridcraft_core::region::default_region().tag {
+        // The display region's month and day names (`janvier`, `janv.`, `lundi`, `lun.`).
+        let m = (dt.month as usize).wrapping_sub(1);
+        let d = dt.weekday as usize;
+        return CalendarDate {
+            year: dt.year.into(),
+            month: dt.month,
+            day: dt.day,
+            month_name: region.months.get(m).copied().unwrap_or(""),
+            month_short: region.months_abbr.get(m).copied().unwrap_or(""),
+            day_name: region.weekdays.get(d).copied().unwrap_or(""),
+            day_short: region.weekdays_abbr.get(d).copied().unwrap_or(""),
+        };
+    }
     let month_name = MONTHS.get((dt.month as usize).wrapping_sub(1)).copied().unwrap_or("");
     let day_name = WEEKDAYS.get(dt.weekday as usize).copied().unwrap_or("");
     CalendarDate {

@@ -1247,3 +1247,47 @@ fn round_as_displayed_matches_excel() {
     assert_eq!(r("0", f64::MAX), f64::MAX);
     assert_eq!(r("0.0E+0", f64::MIN_POSITIVE), 2.2e-308);
 }
+
+/// Lusk Tab: cells are shown in the display region (here fr-FR), while `TEXT()` and the stored
+/// codes keep the canonical en-US spelling.
+#[test]
+fn display_follows_the_french_region() {
+    let fr = gridcraft_core::region::find("fr-FR").unwrap();
+    with_display_region(fr, || {
+        assert_eq!(f("General", 1.5), "1,5");
+        assert_eq!(f("General", 1234567.25), "1234567,25");
+        assert_eq!(f("#,##0.00", 1234.5), "1\u{a0}234,50");
+        assert_eq!(f("0.0%", 0.125), "12,5%");
+        assert_eq!(f("0.00E+00", 12345.0), "1,23E+04");
+        // The system short date and date-time (built-in formats 14 and 22).
+        assert_eq!(f("m/d/yyyy", 46302.0), "07/10/2026");
+        assert_eq!(f("m/d/yyyy h:mm", 46302.75), "07/10/2026 18:00");
+        assert_eq!(f("dddd d mmmm yyyy", 46302.0), "mercredi 7 octobre 2026");
+        assert_eq!(f("d mmm", 46302.0), "7 oct.");
+        // A point in a date stays a point; fractions of a second use the decimal comma.
+        assert_eq!(f("dd.mm.yyyy", 46302.0), "07.10.2026");
+        assert_eq!(f("hh:mm:ss.00", 0.5 + 1.5 / 86_400.0), "12:00:01,50");
+        // TEXT() is a calculation: en-US whatever the display.
+        assert_eq!(text_function(&Value::Number(1234.5), "#,##0.00", S).unwrap(), "1,234.50");
+        assert_eq!(text_function(&Value::Number(46302.0), "mmmm", S).unwrap(), "October");
+    });
+    // Back to en-US outside.
+    assert_eq!(f("#,##0.00", 1234.5), "1,234.50");
+    assert_eq!(f("m/d/yyyy", 46302.0), "10/7/2026");
+}
+
+#[test]
+fn french_words_for_booleans_and_errors() {
+    with_french_words(true, || {
+        assert_eq!(full("General", Value::Bool(true)).text, "VRAI");
+        assert_eq!(full("General", Value::Bool(false)).text, "FAUX");
+        assert_eq!(full("General", Value::Error(CellError::Value)).text, "#VALEUR!");
+        assert_eq!(full("General", Value::Error(CellError::Name)).text, "#NOM?");
+        assert_eq!(full("General", Value::Error(CellError::Num)).text, "#NOMBRE!");
+        assert_eq!(full("General", Value::Error(CellError::Null)).text, "#NUL!");
+        assert_eq!(full("General", Value::Error(CellError::Spill)).text, "#PROPAGATION!");
+        assert_eq!(full("General", Value::Error(CellError::Div0)).text, "#DIV/0!");
+        assert_eq!(full("General", Value::Error(CellError::NA)).text, "#N/A");
+    });
+    assert_eq!(full("General", Value::Bool(true)).text, "TRUE");
+}

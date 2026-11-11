@@ -1,0 +1,4 @@
+# Lusk Tab : dictionnaires et listes de mots intégrés, gardés à l’octet près (fin de ligne LF)
+assets/dictionaries/** -text
+assets/spelling/** -text
+assets/hyphenation/** -text

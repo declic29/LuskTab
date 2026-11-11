@@ -18,8 +18,31 @@ pub(crate) fn canonical(
     {
         return Ok(stored);
     }
-    if locale == FormulaLocale::En || wb.sheet(sheet).is_some_and(|sh| wb.styles.get(sh.style_id(cell)).num_fmt.as_str() == "@") {
+    if wb.sheet(sheet).is_some_and(|sh| wb.styles.get(sh.style_id(cell)).num_fmt.as_str() == "@") {
         return Ok(text.to_string());
+    }
+    // Lusk Tab: numbers and dates typed the way the display region writes them.
+    let region = gridcraft_engine::numfmt::display_region();
+    let regional = region.tag != gridcraft_engine::core::region::default_region().tag;
+    if locale == FormulaLocale::En && !regional {
+        return Ok(text.to_string());
+    }
+    let is_formula = text.starts_with('=')
+        || ((text.starts_with('+') || text.starts_with('-')) && text.chars().nth(1).is_some_and(|c| c.is_ascii_alphabetic() || c == '('));
+    if locale == FormulaLocale::En && is_formula {
+        return Ok(text.to_string());
+    }
+    if regional
+        && !is_formula
+        && let Some(date) = regional_date(text, region)
+    {
+        return Ok(date);
+    }
+    // An error value typed in the formula language (`#VALEUR!`) is stored as Excel stores it.
+    if !is_formula
+        && let Some(error) = gridcraft_engine::core::CellError::ALL.iter().find(|e| text.trim().eq_ignore_ascii_case(locale.error_name(**e)))
+    {
+        return Ok(error.as_str().to_string());
     }
     // Same formula detection as the engine's `input_to_cell` (no trimming: " =1" is text).
     let body = text;
@@ -31,13 +54,86 @@ pub(crate) fn canonical(
         let expr = formula::parse_closing_parens(body, |text| formula::parse_input(text, locale, known));
         return Ok(format!("={}", formula::print(&expr?)));
     }
-    // Decimal-comma number entry follows the same preference, without rewriting text or dates.
-    let normalized = body.trim().replace(locale.decimal_separator(), ".");
+    // Decimal-comma number entry follows the region (else the formula language), without
+    // rewriting text or dates. Digit groups (`1 234,50`) are dropped.
+    let decimal = if regional { region.decimal } else { locale.decimal_separator() };
+    let trimmed = body.trim();
+    let ungrouped: String = if regional && (region.is_group(' ') || region.group == '\u{a0}') {
+        trimmed.chars().filter(|c| !matches!(c, ' ' | '\u{a0}' | '\u{202f}')).collect()
+    } else {
+        trimmed.to_string()
+    };
+    let normalized = if decimal == '.' { ungrouped } else { ungrouped.replace(decimal, ".") };
     let number = normalized.strip_suffix('%').unwrap_or(&normalized);
     if number.parse::<f64>().is_ok_and(f64::is_finite) {
         return Ok(normalized);
     }
     Ok(text.to_string())
+}
+
+/// A date typed day first (`25/12/2026`, `25/12`, `25/12/2026 14:30`) in a day-month-year region,
+/// rewritten month first as the engine reads dates (`12/25/2026`). `None` when `text` isn't one.
+fn regional_date(text: &str, region: &gridcraft_engine::core::Region) -> Option<String> {
+    if let Some(date) = named_month_date(text, region) {
+        return Some(date);
+    }
+    if region.date_order != gridcraft_engine::core::region::DateOrder::Dmy {
+        return None;
+    }
+    let sep = region.date_sep;
+    let trimmed = text.trim();
+    let (date, time) = match trimmed.split_once(' ') {
+        Some((d, t)) => (d, Some(t.trim())),
+        None => (trimmed, None),
+    };
+    let parts: Vec<&str> = date.split(sep).collect();
+    let numeric = |s: &&str| !s.is_empty() && s.len() <= 4 && s.chars().all(|c| c.is_ascii_digit());
+    if !(2..=3).contains(&parts.len()) || !parts.iter().all(numeric) {
+        return None;
+    }
+    let day: u32 = parts.first()?.parse().ok()?;
+    let month: u32 = parts.get(1)?.parse().ok()?;
+    if !(1..=31).contains(&day) || !(1..=12).contains(&month) || parts.first()?.len() > 2 || parts.get(1)?.len() > 2 {
+        return None;
+    }
+    let mut out = format!("{month}/{day}");
+    if let Some(year) = parts.get(2) {
+        out.push('/');
+        out.push_str(year);
+    }
+    if let Some(t) = time {
+        if t.is_empty() || !t.chars().all(|c| c.is_ascii_digit() || c == ':') {
+            return None;
+        }
+        out.push(' ');
+        out.push_str(t);
+    }
+    Some(out)
+}
+
+/// A date typed with the region's month name, day first: `7 oct. 2026`, `7 octobre 2026`,
+/// `7 octobre`, `1er janvier 2027`. Rewritten month first in digits (`10/7/2026`, `10/7`).
+fn named_month_date(text: &str, region: &gridcraft_engine::core::Region) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if !(2..=3).contains(&words.len()) {
+        return None;
+    }
+    let day_word = words.first()?;
+    // French writes the first of the month `1er`.
+    let day_digits = day_word.strip_suffix("er").filter(|d| *d == "1").unwrap_or(day_word);
+    if day_digits.is_empty() || day_digits.len() > 2 || !day_digits.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let day: u32 = day_digits.parse().ok()?;
+    let month = region.month_from_name(words.get(1)?)?;
+    if !(1..=31).contains(&day) {
+        return None;
+    }
+    match words.get(2) {
+        None => Some(format!("{month}/{day}")),
+        Some(year) if (2..=4).contains(&year.len()) && year.chars().all(|c| c.is_ascii_digit()) => Some(format!("{month}/{day}/{year}")),
+        Some(_) => None,
+    }
 }
 
 pub(crate) fn display(text: &str, locale: FormulaLocale, wb: &Workbook, sheet: usize) -> String {
@@ -169,6 +265,42 @@ mod tests {
         assert!(sumifs.ends_with("(sum_range; criteria_range1; criteria1; ...)"), "{sumifs}");
         assert_eq!(description("SUMIFS", Es, Language::Es).as_deref(), Some("Adds the cells that meet every condition."));
         assert_eq!(sig("IF", En, Language::En), "IF(logical_test, [value_if_true], [value_if_false])");
+    }
+
+    /// Lusk Tab: in a French region, numbers and dates are typed the French way and reach the
+    /// engine in its canonical spelling; formulas still follow the formula language.
+    #[test]
+    fn french_region_input() {
+        let fr = gridcraft_engine::core::region::find("fr-FR").unwrap();
+        let wb = Workbook::new();
+        let cell = gridcraft_engine::core::CellRef { row: 0, col: 0 };
+        let typed =
+            |text: &str, locale: FormulaLocale| gridcraft_engine::numfmt::with_display_region(fr, || canonical(text, locale, &wb, 0, cell).unwrap());
+        assert_eq!(typed("25/12/2026", FormulaLocale::Fr), "12/25/2026");
+        assert_eq!(typed("7/10/2026 18:30", FormulaLocale::Fr), "10/7/2026 18:30");
+        assert_eq!(typed("25/12", FormulaLocale::Fr), "12/25");
+        assert_eq!(typed("1 234,5", FormulaLocale::Fr), "1234.5");
+        assert_eq!(typed("1\u{a0}234,5", FormulaLocale::Fr), "1234.5");
+        assert_eq!(typed("12,5%", FormulaLocale::Fr), "12.5%");
+        assert_eq!(typed("#VALEUR!", FormulaLocale::Fr), "#VALUE!");
+        assert_eq!(typed("#n/a", FormulaLocale::Fr), "#N/A");
+        // With the month's name.
+        assert_eq!(typed("7 oct. 2026", FormulaLocale::Fr), "10/7/2026");
+        assert_eq!(typed("7 octobre 2026", FormulaLocale::Fr), "10/7/2026");
+        assert_eq!(typed("25 déc.", FormulaLocale::Fr), "12/25");
+        assert_eq!(typed("1er janvier 2027", FormulaLocale::Fr), "1/1/2027");
+        assert_eq!(typed("14 juillet 26", FormulaLocale::Fr), "7/14/26");
+        // The region applies even with English formulas (a French computer, English interface).
+        assert_eq!(typed("1,5", FormulaLocale::En), "1.5");
+        assert_eq!(typed("25/12/2026", FormulaLocale::En), "12/25/2026");
+        assert_eq!(typed("=SUM(1,2)", FormulaLocale::En), "=SUM(1,2)");
+        assert_eq!(typed("=SOMME(1,5;2)", FormulaLocale::Fr), "=SUM(1.5,2)");
+        // Not dates or numbers: left as typed.
+        for text in ["32/12/2026", "25/13/2026", "Brest", "1/2/3/4", "25/12/2026 midi", "7 rue de Brest", "2er mai"] {
+            assert_eq!(typed(text, FormulaLocale::Fr), text);
+        }
+        // Without a region, nothing changes for English formulas.
+        assert_eq!(canonical("25/12/2026", FormulaLocale::En, &wb, 0, cell).unwrap(), "25/12/2026");
     }
 
     /// French, as in Excel in French: French names, `;` between arguments, French help.

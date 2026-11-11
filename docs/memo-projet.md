@@ -62,21 +62,45 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   français des ~50 fonctions courantes (`crates/ui-egui/src/i18n/fr_functions.rs`). Tests :
   `crates/formula/tests/it/french_input.rs`, `formula_locale::tests::french_function_help`.
 
-## À faire (dans l'ordre du cahier des charges)
+- 11 novembre 2026, **reprise de GridCraft 0.19.0** (fusion de `storytold/gridcraft` main
+  `6dbfbc40`, sans conflit). Pour reprendre plus tard les nouveautés de GridCraft :
+  `git pull --no-rebase https://github.com/storytold/gridcraft main`, puis vérifier.
+- 11 novembre 2026, **affichage à la française** : la région du système (Windows › Région ›
+  Format régional) règle l'affichage des nombres et des dates (`1 234,50`, `11/11/2026`, mois et
+  jours en français) ; la langue de l'interface règle VRAI/FAUX, les erreurs (#VALEUR!, #NOM?,
+  #NOMBRE!, #NUL!, #PROPAGATION!) et les noms des nouveaux classeurs et feuilles (Classeur1,
+  Feuil1). Les dates et nombres se tapent à la française (`25/12/2026`, `1 234,5`). Les valeurs
+  enregistrées, les formules dans les fichiers et TEXTE() restent en anglais canonique. Code :
+  `crates/numfmt/src/display.rs` (région et mots d'affichage), `formula_locale::regional_date`,
+  `model::workbook::set_default_names`, `i18n::use_system_display` (appelé par l'app de bureau et
+  la version web uniquement : les tests et l'outil en ligne de commande restent en en-US).
+  L'exemple `snapshot` accepte `--region fr-FR`.
 
-- **Affichage régional** : les cellules affichent encore `1.5` et les dates à l'américaine. Les
-  formats régionaux français existent (`crates/core/src/region.rs`, `FR_FR`) mais
-  `Workbook.region` n'est jamais réglé ni utilisé à l'affichage : à brancher (région du système,
-  réglable dans les options).
-- Codes d'erreur en français (#VALEUR!, #NOM?, #DIV/0!…) et noms par défaut Classeur1 / Feuil1.
+- 11 novembre 2026, **fin de l'affichage à la française** : Fichier › Options › Général ›
+  « Format régional » (Automatique = celui du système, ou une région au choix ; réglage `region`
+  des préférences de l'interface) ; dates tapées avec le nom du mois (« 7 oct. 2026 »,
+  « 1er janvier 2027 », « 25 déc. ») ; codes d'erreur tapés en français dans les formules et les
+  cellules (#VALEUR!, #NOM?, #NOMBRE!, #NUL!, #PROPAGATION! ; les noms anglais restent acceptés).
+  Code : `i18n::apply_region`, `formula_locale::named_month_date`, `FormulaLocale::error_name`.
+- 11 novembre 2026, **dictionnaires intégrés** : le correcteur de Lusk Texte est repris tel quel
+  dans `crates/proof` (paquet `gridcraft-proof`), avec ses dictionnaires (`assets/dictionaries/fr`
+  Grammalecte, `assets/dictionaries/br` An Drouizig, liste anglaise Moby dans
+  `assets/hyphenation/en-us.dic`) ; mentions dans NOTICE et ATTRIBUTION.md ; `.gitattributes`
+  garde ces fichiers à l'octet près. Révision › Orthographe (F7) vérifie désormais les mots
+  accentués, dans la langue choisie dans Fichier › Options › « Langue du dictionnaire »
+  (Français par défaut, Brezhoneg, English US/UK ; préférence `spellingLanguage`, commande
+  `review.spellingLanguage`). Les mots tout en capitales (TVA, SIRET) sont ignorés. Le dictionnaire
+  personnel (Ajouter au dictionnaire) est inchangé. Le dictionnaire des synonymes lit encore la
+  liste du système (anglais).
+
+## À faire (dans l'ordre du cahier des charges)
 
 1. Fin de la marque avec les installateurs : fichiers Windows (`gridcraft.wxs`, dossier
    `ArtCraft\GridCraft`, éditeur), macOS (`package.sh`, nom de l'app, DMG : le fond
    `packaging/macos/dmg/background.svg` pointait vers l'ancienne icône SVG, à refaire),
-   `sign.ps1`, `flatpak-oci.sh`. Noms « Book1 » et « Sheet1 » à traduire (Classeur1, Feuil1).
-2. Interface française relue, audit des textes, **noms des fonctions en français**.
-3. Dictionnaires intégrés (reprendre le correcteur `proof` de Lusk Texte ; GridCraft ne lit que
-   `/usr/share/dict/words`).
+   `sign.ps1`, `flatpak-oci.sh`.
+2. Interface française relue, audit des textes (les noms des fonctions en français sont faits).
+3. Synonymes en français (le dictionnaire des synonymes lit encore la liste anglaise du système).
 4. Accueil avec le renard, page Mises à jour reliée à `declic29/LuskTab`, OneDrive et Google Drive.
 5. Aide en français et page Confidentialité (après un audit réseau).
 6. Installateurs en français et workflow « Publication » (repris de Lusk Texte).

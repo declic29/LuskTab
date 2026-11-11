@@ -87,3 +87,15 @@ fn defined_names_win_over_french_aliases() {
     let expr = parse_input("SOMME(2;3)+VRAI+SI(FAUX;4;5)", FormulaLocale::Fr, known).unwrap();
     assert_eq!(print(&expr), "SOMME(2,3)+VRAI+IF(FALSE,4,5)");
 }
+
+#[test]
+fn french_error_values_in_formulas() {
+    assert_eq!(input("SI(A1=#N/A;0;A1)"), "IF(A1=#N/A,0,A1)");
+    assert_eq!(input("SIERREUR(A1;#VALEUR!)"), "IFERROR(A1,#VALUE!)");
+    assert_eq!(input("ESTERREUR(#NOM?)+ESTERREUR(#NOMBRE!)+ESTERREUR(#NUL!)"), "ISERROR(#NAME?)+ISERROR(#NUM!)+ISERROR(#NULL!)");
+    // The English names still work.
+    assert_eq!(input("SIERREUR(A1;#VALUE!)"), "IFERROR(A1,#VALUE!)");
+    assert_eq!(shown("IFERROR(A1,#VALUE!)+ISERROR(#DIV/0!)"), "SIERREUR(A1;#VALEUR!)+ESTERREUR(#DIV/0!)");
+    // Inside text, nothing is translated.
+    assert_eq!(shown(r##"IF(A1="#VALUE!",1,2)"##), r##"SI(A1="#VALUE!";1;2)"##);
+}

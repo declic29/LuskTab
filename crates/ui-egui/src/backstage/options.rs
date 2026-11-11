@@ -90,6 +90,53 @@ fn general_options(app: &mut SheetApp, ui: &mut Ui, lang: Language) {
             .response
             .labelled_by(label.id);
         ui.end_row();
+        // Lusk Tab: how numbers and dates are shown and typed (1 234,50 ; 25/12/2026).
+        if i18n::regional_display() {
+            let label = ui.label(lang.tr("Regional format"));
+            let automatic = format!("{} ({})", lang.tr("Automatic"), i18n::system_region().name);
+            let all = gridcraft_engine::core::region::all();
+            let chosen = all.iter().find(|r| r.tag == app.ui.region).map_or(automatic.clone(), |r| r.name.to_string());
+            craft_ui::ComboBox::from_id_salt("backstage_region")
+                .width(220.0)
+                .selected_text(chosen)
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(app.ui.region.is_empty(), &automatic).clicked() {
+                        app.ui.region.clear();
+                    }
+                    for r in all {
+                        if ui.selectable_label(app.ui.region == r.tag, r.name).clicked() {
+                            app.ui.region = r.tag.to_string();
+                        }
+                    }
+                })
+                .response
+                .labelled_by(label.id)
+                .on_hover_text(lang.tr("How numbers and dates are shown and typed (1 234,50 ; 25/12/2026)"));
+            ui.end_row();
+        }
+        // Lusk Tab: the built-in dictionary Review › Spelling checks with.
+        let label = ui.label(lang.tr("Dictionary language"));
+        let current = app.session.prefs.spelling_language.clone();
+        let languages = gridcraft_engine::SPELLING_LANGUAGES;
+        let chosen = languages.iter().find(|(tag, _)| tag.eq_ignore_ascii_case(&current)).map_or(current.clone(), |(_, name)| (*name).to_string());
+        let mut picked = None;
+        craft_ui::ComboBox::from_id_salt("backstage_spelling_language")
+            .width(220.0)
+            .selected_text(chosen)
+            .show_ui(ui, |ui| {
+                for (tag, name) in languages {
+                    if ui.selectable_label(current.eq_ignore_ascii_case(tag), name).clicked() {
+                        picked = Some(tag);
+                    }
+                }
+            })
+            .response
+            .labelled_by(label.id)
+            .on_hover_text(lang.tr("The built-in dictionary used by Review › Spelling"));
+        if let Some(tag) = picked {
+            app.run_or_alert("review.spellingLanguage", json!({"lang": tag}));
+        }
+        ui.end_row();
     });
 }
 

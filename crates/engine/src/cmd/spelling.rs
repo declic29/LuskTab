@@ -1,13 +1,22 @@
-//! Spelling: checks text cells against the system word list (`/usr/share/dict/words` on macOS
-//! and Linux; nothing is bundled) plus a user dictionary kept in the engine preferences.
+//! Spelling (Lusk Tab): checks text cells with the dictionaries built into the program (French,
+//! Breton and English, from Lusk Texte's `gridcraft-proof`), in the language chosen in
+//! File › Options (`spellingLanguage`, French by default), plus a user dictionary kept in the
+//! engine preferences. The thesaurus still reads the system word list (`/usr/share/dict/words`).
 
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
 use gridcraft_core::{RangeRef, Value};
+use gridcraft_proof::ProofLang;
 use serde_json::{Value as Json, json};
 
-use super::{CommandSpec, EngineError, Result, Session, bad, bool_param, cell_param, cmd, has_doc, ok, str_param, target_range, target_sheet};
+use super::{
+    CommandSpec, EngineError, Result, Session, always, bad, bool_param, cell_param, cmd, has_doc, ok, str_param, target_range, target_sheet,
+};
+
+/// The dictionary languages offered in File › Options: tag and name.
+pub const SPELLING_LANGUAGES: [(&str, &str); 4] =
+    [("fr", "Français"), ("br", "Brezhoneg"), ("en-US", "English (United States)"), ("en-GB", "English (United Kingdom)")];
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
@@ -15,9 +24,11 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(noundo "review.addToDictionary", "Add to Dictionary", [], None, "{word}", has_doc, add_word),
         cmd!("review.changeSpelling", "Change", [], None, "{cell, word, to, all?: bool}", has_doc, change),
         cmd!(query "review.thesaurus", "Thesaurus", ["Review", "Proofing"], None, "{word} → related words (words sharing the stem in the dictionary)", has_doc, thesaurus),
+        cmd!(query "review.spellingLanguage", "Dictionary Language", [], None, "{lang?: \"fr\" | \"br\" | \"en-US\" | \"en-GB\"} → the language spelling is checked in", always, spelling_language),
     ]
 }
 
+/// The system word list, for the thesaurus only.
 fn dictionary() -> &'static HashSet<String> {
     static DICT: OnceLock<HashSet<String>> = OnceLock::new();
     DICT.get_or_init(|| {
@@ -41,89 +52,24 @@ fn dictionary() -> &'static HashSet<String> {
     })
 }
 
-fn known(s: &Session, w: &str) -> bool {
-    let l = w.to_lowercase();
-    let dict = dictionary();
-    if dict.contains(&l) || s.prefs.user_dictionary.iter().any(|u| u.eq_ignore_ascii_case(w)) {
-        return true;
-    }
-    // Simple inflections the list doesn't spell out.
-    for suf in ["s", "es", "ed", "ing", "ly", "er", "ers", "'s"] {
-        if let Some(stem) = l.strip_suffix(suf)
-            && stem.len() > 2
-            && (dict.contains(stem) || dict.contains(&format!("{stem}e")))
-        {
-            return true;
-        }
-    }
-    if let Some(stem) = l.strip_suffix("ies")
-        && dict.contains(&format!("{stem}y"))
-    {
-        return true;
-    }
-    false
+/// The language spelling is checked in.
+fn proof_lang(s: &Session) -> ProofLang {
+    ProofLang::from_tag(Some(&s.prefs.spelling_language))
 }
 
-/// Longest word we generate suggestions for. Candidate text grows with the square of the word length, so longer
-/// tokens (no real word is this long) get no suggestions instead of an unbounded allocation.
-const MAX_SUGGEST_LEN: usize = 64;
-
-fn edits1(w: &str) -> Vec<String> {
-    if w.chars().count() > MAX_SUGGEST_LEN {
-        return Vec::new();
-    }
-    let chars: Vec<char> = w.chars().collect();
-    let mut out = Vec::new();
-    let letters = "abcdefghijklmnopqrstuvwxyz";
-    for i in 0..=chars.len() {
-        if i < chars.len() {
-            let mut d = chars.clone();
-            d.remove(i);
-            out.push(d.iter().collect());
-            if i + 1 < chars.len() {
-                let mut t = chars.clone();
-                t.swap(i, i + 1);
-                out.push(t.iter().collect());
-            }
-            for c in letters.chars() {
-                let mut r = chars.clone();
-                r[i] = c;
-                out.push(r.iter().collect());
-            }
-        }
-        for c in letters.chars() {
-            let mut ins = chars.clone();
-            ins.insert(i, c);
-            out.push(ins.iter().collect());
-        }
-    }
-    out
+fn in_user_dictionary(s: &Session, w: &str) -> bool {
+    s.prefs.user_dictionary.iter().any(|u| u.to_lowercase() == w.to_lowercase())
 }
 
-fn suggestions(w: &str) -> Vec<String> {
-    let dict = dictionary();
-    let l = w.to_lowercase();
-    let mut out: Vec<String> = edits1(&l).into_iter().filter(|c| dict.contains(c)).collect();
-    out.sort();
-    out.dedup();
-    out.truncate(6);
-    // Keep the original capitalisation.
-    let cap = w.chars().next().is_some_and(char::is_uppercase);
-    out.into_iter()
-        .map(|s| {
-            if cap {
-                let mut c = s.chars();
-                c.next().map(|f| f.to_uppercase().collect::<String>() + c.as_str()).unwrap_or(s)
-            } else {
-                s
-            }
-        })
-        .collect()
+/// Suggestions for a misspelled word, best first.
+fn suggestions(w: &str, lang: ProofLang) -> Vec<String> {
+    gridcraft_proof::suggest_in(w, 6, lang)
 }
 
 fn spelling(s: &mut Session, p: &Json) -> Result<Json> {
-    if dictionary().is_empty() {
-        return Err(EngineError::Other("No dictionary is available on this system (Lusk Tab uses the system word list).".into()));
+    let lang = proof_lang(s);
+    if !lang.is_proofed() {
+        return Err(EngineError::Other(format!("No dictionary for the language “{}”.", s.prefs.spelling_language)));
     }
     let si = target_sheet(s, p)?;
     let d = s.doc()?;
@@ -138,20 +84,29 @@ fn spelling(s: &mut Session, p: &Json) -> Result<Json> {
             continue;
         }
         let Value::Text(t) = &cell.value else { continue };
-        for w in t.split(|ch: char| !(ch.is_alphabetic() || ch == '\'')) {
-            let w = w.trim_matches('\'');
-            if w.chars().count() < 2 || w.chars().all(char::is_uppercase) || !w.is_ascii() {
+        for issue in gridcraft_proof::check_spelling_in(t, lang) {
+            let Some(w) = t.get(issue.start..issue.end) else { continue };
+            // Single letters and words in capitals (acronyms, codes) are left alone.
+            if w.chars().count() < 2 || w.chars().all(|ch| !ch.is_lowercase()) || in_user_dictionary(s, w) {
                 continue;
             }
-            if !known(s, w) {
-                issues.push(json!({"cell": c.a1(), "word": w, "suggestions": suggestions(w)}));
-            }
+            issues.push(json!({"cell": c.a1(), "word": w, "suggestions": suggestions(w, lang)}));
         }
         if issues.len() >= 500 {
             break;
         }
     }
     Ok(json!({"issues": issues, "done": issues.is_empty()}))
+}
+
+fn spelling_language(s: &mut Session, p: &Json) -> Result<Json> {
+    if let Some(tag) = str_param(p, "lang") {
+        let Some((tag, _)) = SPELLING_LANGUAGES.iter().find(|(t, _)| t.eq_ignore_ascii_case(tag)) else {
+            return Err(bad("review.spellingLanguage", "`lang` must be fr, br, en-US or en-GB"));
+        };
+        s.prefs.spelling_language = (*tag).to_string();
+    }
+    Ok(json!({"lang": s.prefs.spelling_language}))
 }
 
 fn add_word(s: &mut Session, p: &Json) -> Result<Json> {
@@ -189,11 +144,46 @@ fn thesaurus(_: &mut Session, p: &Json) -> Result<Json> {
 mod tests {
     use super::*;
 
+    fn words(s: &mut Session) -> Vec<String> {
+        let out = s.execute("review.spelling", json!({})).unwrap();
+        out["issues"].as_array().unwrap().iter().map(|i| i["word"].as_str().unwrap().to_string()).collect()
+    }
+
+    fn session(texts: &[&str]) -> Session {
+        let mut s = Session::new();
+        s.new_workbook();
+        for (i, t) in texts.iter().enumerate() {
+            s.execute("cell.set", json!({"cell": format!("A{}", i + 1), "input": t})).unwrap();
+        }
+        s
+    }
+
     #[test]
-    fn edits1_is_capped_for_very_long_words() {
-        assert_eq!(edits1("helo").len(), 54 * 4 + 25);
-        assert_eq!(edits1(&"a".repeat(MAX_SUGGEST_LEN)).len(), 54 * MAX_SUGGEST_LEN + 25);
-        assert!(edits1(&"a".repeat(MAX_SUGGEST_LEN + 1)).is_empty());
-        assert!(edits1(&"a".repeat(1_000_000)).is_empty());
+    fn french_is_checked_by_default_with_accents() {
+        let mut s = session(&["Facture de l’été", "Réunion à Brest le lundi", "Dépenses mensuelles", "Ceci est une fôte", "TVA"]);
+        assert_eq!(s.prefs.spelling_language, "fr");
+        assert_eq!(words(&mut s), ["fôte"]);
+        let out = s.execute("review.spelling", json!({})).unwrap();
+        assert!(out["issues"][0]["suggestions"].as_array().unwrap().iter().any(|w| w == "fête"), "{out}");
+    }
+
+    #[test]
+    fn breton_and_english_dictionaries_are_built_in() {
+        let mut s = session(&["Demat d'an holl", "Kenavo", "The monthly budgte"]);
+        s.execute("review.spellingLanguage", json!({"lang": "br"})).unwrap();
+        let br = words(&mut s);
+        assert!(!br.iter().any(|w| w == "Demat" || w == "Kenavo"), "{br:?}");
+        s.execute("review.spellingLanguage", json!({"lang": "en-US"})).unwrap();
+        assert_eq!(words(&mut s).last().map(String::as_str), Some("budgte"));
+        assert!(s.execute("review.spellingLanguage", json!({"lang": "xx"})).is_err());
+        assert_eq!(s.execute("review.spellingLanguage", json!({})).unwrap()["lang"], "en-US");
+    }
+
+    #[test]
+    fn added_words_are_no_longer_flagged() {
+        let mut s = session(&["Le projet Kerlusk"]);
+        assert_eq!(words(&mut s), ["Kerlusk"]);
+        s.execute("review.addToDictionary", json!({"word": "kerlusk"})).unwrap();
+        assert!(words(&mut s).is_empty());
     }
 }

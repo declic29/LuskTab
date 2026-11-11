@@ -1,7 +1,7 @@
 //! Renders the whole GridCraft window offscreen (wgpu, no window) to a PNG.
 //!
 //! `cargo run --release -p gridcraft-ui-egui --example snapshot -- [--sample sales] [--in file.xlsx]
-//!  [--size 1440x900] [--scale 2] [--cmd 'id={json}']... [--tab Insert] [--backstage home|account|…] [--dark] [--language en|es|zh|ja|ko|ru|pt|de|cs|fr|tr]
+//!  [--size 1440x900] [--scale 2] [--cmd 'id={json}']... [--tab Insert] [--backstage home|account|…] [--region fr-FR] [--dark] [--language en|es|zh|ja|ko|ru|pt|de|cs|fr|tr]
 //!  [--pane name] [--object id] [--dialog 'name={json}'] [--refedit key=A1:B2] [--hf-edit header|footer] out.png`
 //!
 //! `--refedit key=range` collapses the open dialog to its reference box `key`, then selects
@@ -27,6 +27,7 @@ fn main() {
     let mut hf_edit: Option<String> = None;
     let mut refedit: Option<String> = None;
     let mut backstage: Option<String> = None;
+    let mut region: Option<String> = None;
     let mut out = "snapshot.png".to_string();
     let mut i = 0;
     while i < args.len() {
@@ -60,6 +61,10 @@ fn main() {
                 tab = args.get(i).cloned();
             }
             "--dark" => dark = true,
+            "--region" => {
+                i += 1;
+                region = args.get(i).cloned();
+            }
             "--backstage" => {
                 i += 1;
                 backstage = args.get(i).cloned();
@@ -96,6 +101,13 @@ fn main() {
     // Catalog the installed fonts first (the app scans in the background from its first frame), so
     // the workbook's fonts are drawn in their own faces, not a substitute.
     let _ = gridcraft_ui_egui::fonts::catalog();
+    // `--region fr-FR`: cells shown as that region writes them, with the interface language's words.
+    if let Some(tag) = &region {
+        gridcraft_engine::numfmt::set_display_region(gridcraft_engine::core::region::lookup(tag));
+        if let Some(l) = language.as_deref().and_then(gridcraft_ui_egui::i18n::Language::parse) {
+            gridcraft_ui_egui::i18n::apply_display_words(l);
+        }
+    }
     let mut session = Session::new();
     if let Some(p) = &input {
         session.execute("file.open", json!({"path": p})).expect("open");

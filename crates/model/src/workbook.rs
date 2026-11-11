@@ -343,11 +343,33 @@ impl std::fmt::Debug for ActiveSheet {
     }
 }
 
+/// The base names of new sheets and new workbooks (`Sheet`, `Book`), set by the app from the
+/// interface language (Lusk Tab: `Feuil` and `Classeur` in French, as Excel in French names them).
+/// Files keep the names their sheets have; this only names what is created.
+static DEFAULT_NAMES: std::sync::RwLock<(&str, &str)> = std::sync::RwLock::new(("Sheet", "Book"));
+
+/// Sets the base names of new sheets and workbooks (`("Feuil", "Classeur")`).
+pub fn set_default_names(sheet: &'static str, book: &'static str) {
+    if let Ok(mut names) = DEFAULT_NAMES.write() {
+        *names = (sheet, book);
+    }
+}
+
+/// The base name of new sheets: `Sheet` unless the app set another.
+pub fn sheet_base_name() -> &'static str {
+    DEFAULT_NAMES.read().map(|names| names.0).unwrap_or("Sheet")
+}
+
+/// The base name of new workbooks: `Book` unless the app set another.
+pub fn book_base_name() -> &'static str {
+    DEFAULT_NAMES.read().map(|names| names.1).unwrap_or("Book")
+}
+
 impl Workbook {
-    /// A new workbook with one sheet, "Sheet1".
+    /// A new workbook with one sheet, "Sheet1" (or the base name set by [`set_default_names`]).
     pub fn new() -> Workbook {
         Workbook {
-            sheets: vec![Arc::new(Sheet::new("Sheet1"))],
+            sheets: vec![Arc::new(Sheet::new(format!("{}1", sheet_base_name())))],
             names: vec![],
             styles: StyleTable::default(),
             theme: Theme::default(),
@@ -395,9 +417,10 @@ impl Workbook {
     pub fn active(&self) -> Option<&Sheet> {
         self.sheet(self.active_sheet())
     }
-    /// A fresh sheet name `SheetN` not in use.
+    /// A fresh sheet name `SheetN` (`Feuil2` in French) not in use.
     pub fn next_sheet_name(&self) -> String {
-        (1..).map(|n| format!("Sheet{n}")).find(|n| self.sheet_index(n).is_none()).unwrap_or_else(|| "Sheet".into())
+        let base = sheet_base_name();
+        (1..).map(|n| format!("{base}{n}")).find(|n| self.sheet_index(n).is_none()).unwrap_or_else(|| base.into())
     }
     /// Validates a sheet name like Excel: 1–31 chars, none of `: \ / ? * [ ]`, not starting or
     /// ending with `'`, unique (case-insensitive) unless it is `except`'s own name.

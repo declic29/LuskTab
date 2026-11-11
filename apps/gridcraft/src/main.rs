@@ -324,11 +324,16 @@ fn main() -> eframe::Result<()> {
     {
         log::warn!("sample {s}: {e}");
     }
+    // Lusk Tab: numbers, dates and cell words as the computer's regional settings and the
+    // interface language write them.
+    gridcraft_ui_egui::i18n::use_system_display();
     let mut app = SheetApp::new(session, services());
     app.watch_desktop_theme();
     app.start_update_check();
     let control_port = control_port;
     load_prefs(&mut app);
+    // The startup workbook is named in the interface language (Classeur1, Feuil1).
+    gridcraft_ui_egui::i18n::apply_display_words(app.ui.language);
     // Stamp the startup workbook's author from the persisted user name.
     if app.session.documents().is_empty() {
         app.session.new_workbook();

@@ -62,6 +62,19 @@ impl FormulaLocale {
             Self::Fr => '.',
         }
     }
+    /// An error value as this language writes it in formulas (`#VALEUR!` in French). The errors a
+    /// language has no name for keep the English one.
+    pub fn error_name(self, error: gridcraft_core::CellError) -> &'static str {
+        use gridcraft_core::CellError;
+        match (self, error) {
+            (Self::Fr, CellError::Null) => "#NUL!",
+            (Self::Fr, CellError::Value) => "#VALEUR!",
+            (Self::Fr, CellError::Name) => "#NOM?",
+            (Self::Fr, CellError::Num) => "#NOMBRE!",
+            (Self::Fr, CellError::Spill) => "#PROPAGATION!",
+            _ => error.as_str(),
+        }
+    }
     pub fn function_name(self, canonical: &str) -> &str {
         self.table().iter().find(|(en, _)| en.eq_ignore_ascii_case(canonical)).map(|(_, local)| *local).unwrap_or(canonical)
     }
@@ -128,6 +141,7 @@ pub fn print_input(expr: &Expr, locale: FormulaLocale, known_name: impl Fn(&str)
                 out.push_str(text);
             }
             Tok::Number(_) => out.push_str(&text.replace('.', &locale.decimal_separator().to_string())),
+            Tok::Error(error) => out.push_str(locale.error_name(error)),
             Tok::Comma => out.push(if array_depth > 0 { locale.array_column_separator() } else { locale.list_separator() }),
             _ => out.push_str(text),
         }

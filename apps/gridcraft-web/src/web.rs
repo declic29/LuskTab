@@ -62,6 +62,8 @@ pub fn start() {
                     if let Some(bridge) = &app_bridge {
                         bridge.connect(&mut services, inbox.clone(), cc.egui_ctx.clone());
                     }
+                    // Lusk Tab: numbers, dates and cell words as the browser's language writes them.
+                    gridcraft_ui_egui::i18n::use_system_display();
                     let mut app = SheetApp::new(session, services);
                     app.ui.system_theme = true;
                     // `?chrome=none|notitlebar|nofiletab`: a host that embeds the sheet in its own window and owns the files

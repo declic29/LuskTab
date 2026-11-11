@@ -1,10 +1,12 @@
 //! GridCraft number formats: Excel format codes (`#,##0.00;[Red](#,##0.00)`, dates, fractions,
-//! scientific…), the General display format and the `TEXT()` worksheet function. en-US only.
+//! scientific…), the General display format and the `TEXT()` worksheet function. Display follows
+//! the region set in `display` (Lusk Tab); stored and calculated text stays en-US.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 #![forbid(unsafe_code)]
 
 mod calendar;
 mod decimal;
+mod display;
 mod parse;
 mod render;
 
@@ -13,6 +15,7 @@ use std::sync::Arc;
 use gridcraft_core::{CellError, DateSystem, Value};
 
 pub use decimal::format_general_fit;
+pub use display::{bool_text, display_region, error_text, set_display_region, set_french_words, with_display_region, with_french_words};
 
 use parse::{DatePart, SecKind, Section, Tok};
 use render::Out;
@@ -407,11 +410,15 @@ impl NumberFormat {
 pub fn format_value(v: &Value, fmt: &NumberFormat, sys: DateSystem) -> Formatted {
     match v {
         Value::Empty => Formatted::default(),
-        Value::Number(n) if !n.is_finite() => Formatted { text: CellError::Num.as_str().into(), ..Formatted::default() },
-        Value::Number(n) => fmt.format_number(*n, sys).0,
+        Value::Number(n) if !n.is_finite() => Formatted { text: error_text(CellError::Num).into(), ..Formatted::default() },
+        // The system date formats follow the display region (Excel's built-in formats 14 and 22).
+        Value::Number(n) => match display::system_date_code(fmt.code()) {
+            Some(code) => NumberFormat::parse_cached(code).format_number(*n, sys).0,
+            None => fmt.format_number(*n, sys).0,
+        },
         Value::Text(t) => fmt.format_text(t),
-        Value::Bool(b) => Formatted { text: if *b { "TRUE" } else { "FALSE" }.into(), ..Formatted::default() },
-        Value::Error(e) => Formatted { text: e.as_str().into(), ..Formatted::default() },
+        Value::Bool(b) => Formatted { text: bool_text(*b).into(), ..Formatted::default() },
+        Value::Error(e) => Formatted { text: error_text(*e).into(), ..Formatted::default() },
         Value::Array(a) => match a.data.first() {
             Some(Value::Array(_)) | None => Formatted::default(),
             Some(first) => format_value(first, fmt, sys),
@@ -499,6 +506,11 @@ impl NumberFormat {
 const MAX_CELL_TEXT_CHARS: usize = 32_767;
 
 pub fn text_function(v: &Value, code: &str, sys: DateSystem) -> Result<String, CellError> {
+    // A calculation result: always the canonical en-US spelling, whatever the display region.
+    display::canonical(|| text_function_canonical(v, code, sys))
+}
+
+fn text_function_canonical(v: &Value, code: &str, sys: DateSystem) -> Result<String, CellError> {
     if code.is_empty() {
         return Ok(String::new());
     }

@@ -35,6 +35,7 @@ use gridcraft_model::Workbook;
 use serde::Serialize;
 use serde_json::Value as Json;
 
+pub use cmd::spelling::SPELLING_LANGUAGES;
 pub use cmd::{CommandInfo, CommandSpec, command_specs, find_command, register_test_command};
 pub use gridcraft_calc as calc;
 pub use gridcraft_core as core;
@@ -405,6 +406,8 @@ pub struct Prefs {
     pub default_font_size: f32,
     pub sheets_in_new_workbook: usize,
     pub r1c1: bool,
+    /// Lusk Tab: the language spelling is checked in (`fr`, `br`, `en-US`, `en-GB`).
+    pub spelling_language: String,
     /// Words added with Add to Dictionary.
     pub user_dictionary: Vec<String>,
     /// View › Show › Formula Bar (an application option in Excel, not saved in the file).
@@ -446,6 +449,7 @@ impl Default for Prefs {
             default_font_size: gridcraft_model::DEFAULT_FONT_SIZE,
             sheets_in_new_workbook: 1,
             r1c1: false,
+            spelling_language: "fr".into(),
             user_dictionary: vec![],
             formula_bar: true,
             status_bar: StatusBarStats::default(),
@@ -623,16 +627,17 @@ impl Session {
             }
         }
     }
-    /// A new blank workbook titled `BookN`.
+    /// A new blank workbook titled `BookN` (`ClasseurN` in French, see `model::set_default_names`).
     pub fn new_workbook(&mut self) -> usize {
-        let n = (1..).find(|n| !self.docs.iter().any(|d| d.title == format!("Book{n}") && d.path.is_none())).unwrap_or(1);
+        let base = gridcraft_model::workbook::book_base_name();
+        let n = (1..).find(|n| !self.docs.iter().any(|d| d.title == format!("{base}{n}") && d.path.is_none())).unwrap_or(1);
         let mut wb = Workbook::new();
         wb.props.author = self.prefs.user_name.clone();
         for _ in 1..self.prefs.sheets_in_new_workbook.clamp(1, 255) {
             let name = wb.next_sheet_name();
             wb.sheets.push(Arc::new(gridcraft_model::Sheet::new(name)));
         }
-        self.add_document(DocState::new(wb, None, format!("Book{n}"), Trust::Local))
+        self.add_document(DocState::new(wb, None, format!("{base}{n}"), Trust::Local))
     }
 
     /// Journals a command, then trims the oldest entries past either cap. A recording in progress
