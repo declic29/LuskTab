@@ -1,13 +1,7 @@
-GridCraft app icon (gridcraft.svg and every file derived from it in this directory:
+Icône de Lusk Tab (lusk-tab-logo.png et tous les fichiers qui en sont tirés dans ce dossier :
 gridcraft-1024.png, gridcraft-macos-512.png, gridcraft.icns, gridcraft.ico, hicolor/).
 
-PLACEHOLDER artwork: original work written for this project by GridCraft contributors (simple
-hand-written SVG geometry). No third-party material. Licensed like the rest of GridCraft, under
-either of
+Le logo appartient à l'association Lusk (loi 1901), qui en autorise l'utilisation et la
+redistribution avec Lusk Tab. Il n'est pas couvert par les licences MIT et Apache du code.
 
-  * Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
-  * MIT license (https://opensource.org/licenses/MIT)
-
-at your option.
-
-Regenerate the derived files with packaging/icons.sh.
+Les fichiers dérivés se régénèrent avec packaging/icons.sh.
