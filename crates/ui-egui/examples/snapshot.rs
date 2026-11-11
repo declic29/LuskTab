@@ -1,7 +1,7 @@
 //! Renders the whole GridCraft window offscreen (wgpu, no window) to a PNG.
 //!
 //! `cargo run --release -p gridcraft-ui-egui --example snapshot -- [--sample sales] [--in file.xlsx]
-//!  [--size 1440x900] [--scale 2] [--cmd 'id={json}']... [--tab Insert] [--dark] [--language en|es|zh|ja|ko|ru|pt|de|cs|fr|tr]
+//!  [--size 1440x900] [--scale 2] [--cmd 'id={json}']... [--tab Insert] [--backstage home|account|…] [--dark] [--language en|es|zh|ja|ko|ru|pt|de|cs|fr|tr]
 //!  [--pane name] [--object id] [--dialog 'name={json}'] [--refedit key=A1:B2] [--hf-edit header|footer] out.png`
 //!
 //! `--refedit key=range` collapses the open dialog to its reference box `key`, then selects
@@ -26,6 +26,7 @@ fn main() {
     let mut language: Option<String> = None;
     let mut hf_edit: Option<String> = None;
     let mut refedit: Option<String> = None;
+    let mut backstage: Option<String> = None;
     let mut out = "snapshot.png".to_string();
     let mut i = 0;
     while i < args.len() {
@@ -59,6 +60,10 @@ fn main() {
                 tab = args.get(i).cloned();
             }
             "--dark" => dark = true,
+            "--backstage" => {
+                i += 1;
+                backstage = args.get(i).cloned();
+            }
             "--pane" => {
                 i += 1;
                 pane = args.get(i).cloned();
@@ -125,6 +130,9 @@ fn main() {
                 }
                 app.grid.pane = pane;
                 app.select_object_id(chart);
+                if let Some(page) = backstage.as_deref().and_then(gridcraft_ui_egui::backstage::Page::parse) {
+                    app.open_backstage(page);
+                }
                 if let Some(d) = &dialog {
                     let (name, p) =
                         d.split_once('=').map(|(a, b)| (a, serde_json::from_str(b).unwrap_or(json!({})))).unwrap_or((d.as_str(), json!({})));

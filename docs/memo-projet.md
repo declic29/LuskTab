@@ -41,12 +41,23 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   house-rules, AGENTS.md, CLAUDE.md, ROADMAP.md, docs/*.md, docs/brand, contributors, omastore.toml
   retirés) ; ligne Lusk dans LICENSE-MIT ; Dependabot mensuel ; identifiant `bzh.lusk.tab` ;
   icônes tirées du logo (`packaging/icons.sh` réécrit avec Pillow).
+- 11 novembre 2026, marque : « Lusk Tab » dans tous les textes affichés et leurs traductions
+  (commentaires, noms internes et données stockées dans les classeurs inchangés) ; éditeur « Lusk »
+  et copyright dans le `.exe`, Info.plist, la fiche Linux (metainfo, .desktop, nfpm) ; À propos
+  simplifié (Lusk, origine GridCraft, liens lusk.bzh et GitHub) ; menu Aide macOS vers lusk.bzh ;
+  réglages et journaux dans `%APPDATA%\LuskTab`, `~/Library/Application Support/Lusk Tab`,
+  `~/.config/lusk-tab` ; barre de gauche en #7bc143 avec texte vert très foncé (contraste 7,4:1) ;
+  README en français ; NOTICE au nom de Lusk. Option `--backstage <page>` ajoutée à l'exemple
+  `snapshot` pour photographier les pages du menu Fichier.
+- Le 11 novembre à 16 h 02, des modifications d'origine inconnue sont apparues dans la copie de
+  travail de Claude ; elles ont été mises de côté (`git stash`) et l'étape refaite à la main.
 
 ## À faire (dans l'ordre du cahier des charges)
 
-1. Marque : nom affiché, éditeur, écran de démarrage, À propos, README en français, NOTICE, paquets
-   Linux (metainfo, nfpm), macOS (Info.plist, DMG : le fond `packaging/macos/dmg/background.svg`
-   pointait vers l'ancienne icône SVG, à refaire), `.exe` Windows ; couleur #7bc143.
+1. Fin de la marque avec les installateurs : fichiers Windows (`gridcraft.wxs`, dossier
+   `ArtCraft\GridCraft`, éditeur), macOS (`package.sh`, nom de l'app, DMG : le fond
+   `packaging/macos/dmg/background.svg` pointait vers l'ancienne icône SVG, à refaire),
+   `sign.ps1`, `flatpak-oci.sh`. Noms « Book1 » et « Sheet1 » à traduire (Classeur1, Feuil1).
 2. Interface française relue, audit des textes, **noms des fonctions en français**.
 3. Dictionnaires intégrés (reprendre le correcteur `proof` de Lusk Texte ; GridCraft ne lit que
    `/usr/share/dict/words`).

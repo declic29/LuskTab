@@ -1,8 +1,10 @@
 [Desktop Entry]
 Type=Application
-Name=GridCraft
+Name=Lusk Tab
 GenericName=Spreadsheet
+GenericName[fr]=Tableur
 Comment=Calculate, analyse and chart data in workbooks
+Comment[fr]=Calculer, analyser et représenter des données dans des classeurs
 Exec=gridcraft %F
 TryExec=gridcraft
 Icon=bzh.lusk.tab
@@ -11,4 +13,5 @@ StartupNotify=true
 StartupWMClass=bzh.lusk.tab
 Categories=Office;Spreadsheet;
 MimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel.sheet.macroEnabled.12;application/vnd.ms-excel.sheet.binary.macroEnabled.12;application/vnd.oasis.opendocument.spreadsheet;text/csv;text/tab-separated-values;
+Keywords[fr]=tableur;classeur;feuille;formule;graphique;xlsx;ods;csv;excel;
 Keywords=spreadsheet;workbook;sheet;table;formula;chart;pivot;xlsx;xlsb;ods;csv;tsv;excel;

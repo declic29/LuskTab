@@ -31,9 +31,9 @@
     <string>zh-Hans</string>
   </array>
   <key>CFBundleDisplayName</key>
-  <string>GridCraft</string>
+  <string>Lusk Tab</string>
   <key>CFBundleName</key>
-  <string>GridCraft</string>
+  <string>Lusk Tab</string>
   <key>CFBundleExecutable</key>
   <string>GridCraft</string>
   <key>CFBundleIdentifier</key>
@@ -67,7 +67,7 @@
   <key>NSRequiresAquaSystemAppearance</key>
   <false/>
   <key>NSHumanReadableCopyright</key>
-  <string>Copyright © the GridCraft authors. MIT OR Apache-2.0.</string>
+  <string>© 2026 Lusk, association loi 1901. Logiciel libre sous licence MIT OR Apache-2.0.</string>
 
   <!-- Files GridCraft opens. Rank Alternate: it's offered under "Open With" without taking
        over the default app (Numbers, another spreadsheet) for these types. -->

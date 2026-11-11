@@ -5,29 +5,26 @@
   <id>bzh.lusk.tab</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT OR Apache-2.0</project_license>
-  <name>GridCraft</name>
-  <summary>Calculate, analyse and chart data in workbooks</summary>
-  <developer id="ai.storyteller">
-    <name>Learning Machines LLC</name>
+  <name>Lusk Tab</name>
+  <summary>Calculate, analyse and chart data in workbooks; open and save Excel files</summary>
+  <summary xml:lang="fr">Calculer, analyser et représenter des données ; ouvrir et enregistrer des fichiers Excel</summary>
+  <developer id="bzh.lusk">
+    <name>Lusk (association loi 1901)</name>
   </developer>
   <description>
     <p>
-      GridCraft is an open-source, native spreadsheet. It opens and saves .xlsx workbooks and
-      CSV/TSV files, evaluates hundreds of worksheet functions, and formats, sorts, filters and
-      charts your data.
+      Lusk Tab is a free, open-source spreadsheet published by the Lusk association. It opens and saves .xlsx workbooks and CSV/TSV files, evaluates hundreds of worksheet functions, and formats, sorts, filters and charts your data. Your workbooks stay on your computer.
     </p>
-    <p>
-      Every action is a command that the included gridcraft-cli tool and AI agents (over MCP)
-      can run too, so workbooks can be built and checked without opening a window.
+    <p xml:lang="fr">
+      Lusk Tab est un tableur libre et gratuit, publié par l'association Lusk. Il ouvre et enregistre les classeurs .xlsx et les fichiers CSV/TSV, calcule des centaines de fonctions, met en forme, trie, filtre et représente vos données en graphiques. Vos classeurs restent sur votre ordinateur.
     </p>
   </description>
   <launchable type="desktop-id">bzh.lusk.tab.desktop</launchable>
   <icon type="stock">bzh.lusk.tab</icon>
   <!-- Only url types known to appstream 0.15 (Ubuntu 22.04, where CI validates): no vcs-browser. -->
-  <url type="homepage">https://getartcraft.com/apps/gridcraft</url>
-  <url type="bugtracker">https://github.com/storytold/gridcraft/issues</url>
-  <url type="help">https://github.com/storytold/gridcraft</url>
-  <url type="contact">https://discord.gg/artcraft</url>
+  <url type="homepage">https://www.lusk.bzh</url>
+  <url type="bugtracker">https://github.com/declic29/LuskTab/issues</url>
+  <url type="help">https://github.com/declic29/LuskTab</url>
   <categories>
     <category>Office</category>
     <category>Spreadsheet</category>
@@ -38,11 +35,13 @@
     <keyword>formula</keyword>
     <keyword>xlsx</keyword>
     <keyword>csv</keyword>
+    <keyword xml:lang="fr">tableur</keyword>
+    <keyword xml:lang="fr">classeur</keyword>
   </keywords>
-  <!-- Proposed app colour (GridCraft green #1f9d55 / ink #147a40); see assets/app-icon/README.md. -->
+  <!-- Lusk Tab green (#7bc143), as on the left bar of the app. -->
   <branding>
-    <color type="primary" scheme_preference="light">#a7e3bf</color>
-    <color type="primary" scheme_preference="dark">#147a40</color>
+    <color type="primary" scheme_preference="light">#cfe9b4</color>
+    <color type="primary" scheme_preference="dark">#4c7d26</color>
   </branding>
   <requires>
     <display_length compare="ge">760</display_length>

@@ -176,7 +176,7 @@ use unsupported as platform;
 mod unsupported {
     use super::{Command, OsString, Path, Result, SandboxError, Support, policy::Checked};
 
-    const WHY: &str = "GridCraft confines programs on Linux and macOS only";
+    const WHY: &str = "Lusk Tab confines programs on Linux and macOS only";
 
     pub fn support() -> Support {
         Support::Unsupported(WHY.into())

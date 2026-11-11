@@ -38,7 +38,7 @@ case "$ARCH" in
   aarch64 | arm64) ARCH=aarch64; DEB_ARCH=arm64 ;;
   *) echo "unsupported architecture $ARCH" >&2; exit 2 ;;
 esac
-export GRIDCRAFT_MAINTAINER="${GRIDCRAFT_MAINTAINER:-GridCraft maintainers <gridcraft@storyteller.ai>}"
+export GRIDCRAFT_MAINTAINER="${GRIDCRAFT_MAINTAINER:-Lusk <contact@lusk.bzh>}"
 BASENAME="gridcraft-$VERSION-linux-$ARCH"
 
 echo "==> GridCraft $VERSION for Linux $ARCH ($FORMATS)"

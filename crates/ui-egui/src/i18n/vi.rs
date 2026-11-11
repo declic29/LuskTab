@@ -256,7 +256,7 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Command\nPalette" => "Bảng\nlệnh",
         "Agent\nControl" => "Điều khiển\nagent",
         "Action\nJournal" => "Nhật ký\nthao tác",
-        "About\nGridCraft" => "Giới thiệu\nGridCraft",
+        "About\nLusk Tab" => "Giới thiệu\nLusk Tab",
         "Share" => "Chia sẻ",
         "Add Chart\nElement" => "Thêm thành phần\nbiểu đồ",
         "Change\nChart Type" => "Đổi kiểu\nbiểu đồ",
