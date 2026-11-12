@@ -166,6 +166,8 @@ pub enum Icon {
     NewFile,
     OpenFolder,
     Info,
+    /// Lusk Tab: the fox of lusk.bzh (an image, not line art), for About Lusk Tab.
+    LuskFox,
     /// Lusk Tab: an online storage space (OneDrive, Google Drive).
     Cloud,
     /// Lusk Tab: a question mark in a circle, for a help tip.
@@ -307,8 +309,39 @@ pub fn paint_on_sheet(p: &Painter, rect: Rect, icon: Icon, c: Color32) {
     paint_with(p, rect, icon, c, &Palette::of(&Tokens::light()));
 }
 
+/// Lusk Tab : la tête du renard de lusk.bzh (`assets/avatar/lusk-renard-tete.png`), dans ses
+/// couleurs, carrée au centre de `rect`. La texture est chargée une fois.
+fn paint_fox(p: &Painter, rect: Rect) {
+    let ctx = p.ctx();
+    let id = egui::Id::unique("lusk_fox_head_texture");
+    let tex = ctx.data(|d| d.get_temp::<egui::TextureHandle>(id)).unwrap_or_else(|| {
+        let img = image::load_from_memory(include_bytes!("../../../assets/avatar/lusk-renard-tete.png"))
+            .map(|i| i.to_rgba8())
+            .unwrap_or_else(|_| image::RgbaImage::from_pixel(1, 1, image::Rgba([0, 0, 0, 0])));
+        let tex = ctx.load_texture(
+            "lusk_fox_head",
+            egui::ColorImage::from_rgba_unmultiplied([img.width() as usize, img.height() as usize], img.as_raw()),
+            egui::TextureOptions::LINEAR,
+        );
+        ctx.data_mut(|d| d.insert_temp(id, tex.clone()));
+        tex
+    });
+    let side = rect.width().min(rect.height());
+    let r = Rect::from_center_size(rect.center(), vec2(side, side));
+    p.image(tex.id(), r, Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), Color32::WHITE);
+}
+
 /// Draws `icon` into `rect` (square-ish), in colour `c`, with palette `pal`.
 fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
+    if icon == Icon::LuskFox {
+        paint_fox(p, rect);
+    } else {
+        paint_line_art(p, rect, icon, c, pal);
+    }
+}
+
+/// [`paint_with`] for the icons drawn as line art (all but [`Icon::LuskFox`]).
+fn paint_line_art(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
     let side = rect.width().min(rect.height());
     let r = Rect::from_center_size(rect.center(), vec2(side, side));
     let g = G { p, r, s: side / 16.0 };
@@ -871,6 +904,8 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
             g.line(&[(6.0, 6.3), (6.4, 5.1), (8.0, 4.4), (9.6, 5.0), (10.1, 6.3), (9.4, 7.6), (8.0, 8.4), (8.0, 9.8)], c, 1.3);
             g.circle(8.0, 11.9, 0.8, Some(c), None);
         }
+        // Drawn from its image before the line art (see `paint_fox`).
+        Icon::LuskFox => {}
         Icon::Info => {
             g.circle(8.0, 8.0, 6.5, None, Some(c));
             g.line(&[(8.0, 7.0), (8.0, 11.8)], c, 1.3);

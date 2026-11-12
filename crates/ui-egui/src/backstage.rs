@@ -988,7 +988,7 @@ fn account(app: &mut SheetApp, ui: &mut Ui) {
     });
     ui.add_space(18.0);
     ui.horizontal(|ui| {
-        if square_button(ui, Icon::Info, lang.tr("About Lusk Tab")).clicked() {
+        if square_button(ui, Icon::LuskFox, lang.tr("About Lusk Tab")).clicked() {
             app.open_dialog("about", json!({}));
         }
         ui.add_space(12.0);
