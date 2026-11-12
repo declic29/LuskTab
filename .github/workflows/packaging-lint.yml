@@ -1,5 +1,5 @@
-# Quick release-pipeline checks without a Rust build: workflow and packaging-script syntax,
-# Linux desktop metadata, and the Windows desktop-shortcut installer lifecycle.
+# Quick static checks for the release pipeline (seconds, no Rust build): workflow syntax,
+# packaging shell/PowerShell scripts, and the Linux desktop/AppStream/Flatpak metadata.
 name: Packaging lint
 
 on:
@@ -27,10 +27,6 @@ jobs:
     name: Windows installation policy (no app build)
     runs-on: windows-latest
     steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
-        with:
-          egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
