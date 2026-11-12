@@ -1010,6 +1010,7 @@ impl Dialog {
             "commandSearch" => Dialog::custom("commandSearch", "Search Commands", json!({})),
             "agents" => Dialog::custom("agents", "Agent Control", json!({})),
             "help" => Dialog::custom("help", "Lusk Tab Help", json!({})),
+            "privacy" => Dialog::custom("privacy", "Your data and your privacy", json!({})),
             "about" => {
                 let mut d = Dialog::custom("about", "About Lusk Tab", json!({}));
                 d.tab = match p("tab").as_str() {

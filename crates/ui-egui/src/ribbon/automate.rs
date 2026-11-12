@@ -93,6 +93,9 @@ pub(super) fn help(app: &mut SheetApp, ui: &mut Ui) {
     if big_button(ui, Icon::Help, "Help", "Getting started with Lusk Tab: formulas, shortcuts, files, where to get help", false).clicked() {
         app.open_dialog("help", json!({}));
     }
+    if big_button(ui, Icon::Lock, "Privacy", "What stays on your computer and the only times Lusk Tab uses the Internet", false).clicked() {
+        app.open_dialog("privacy", json!({}));
+    }
     let __k = big_button(ui, Icon::Info, "About\nLusk Tab", "Version, publisher and origin of the software", false);
     control_keytip(app, ui, &__k, "about");
     if __k.clicked() {

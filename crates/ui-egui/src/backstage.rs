@@ -228,7 +228,11 @@ pub fn show(app: &mut SheetApp, ui: &mut Ui) {
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
             egui::Frame::NONE.inner_margin(egui::Margin { left: 44, right: 32, top: 26, bottom: 32 }).show(ui, |ui| {
                 ui.set_max_width(CONTENT_W);
-                ui.label(RichText::new(lang.tr(bs.page.label())).font(theme::ui_font(28.0)).color(t.text));
+                if bs.page == Page::Home {
+                    greeting(ui, lang);
+                } else {
+                    ui.label(RichText::new(lang.tr(bs.page.label())).font(theme::ui_font(28.0)).color(t.text));
+                }
                 ui.add_space(18.0);
                 match bs.page {
                     Page::Home => home(app, ui, &mut bs, &mut out),
@@ -553,24 +557,40 @@ fn action_row(ui: &mut Ui, icon: Icon, title: &str, detail: &str) -> egui::Respo
 }
 
 /// Lusk Tab (from Lusk Texte): the online spaces, OneDrive then Google Drive. Each has a button per
-/// folder synchronised on this computer, which opens the save picker in that folder; the service's
-/// app then sends the file online, without Lusk Tab connecting to the account. When the app isn't
-/// installed the button is greyed out. A help icon next to it says what to install. Returns the
-/// folder clicked.
-fn cloud_buttons(ui: &mut Ui, lang: Language) -> Option<std::path::PathBuf> {
+/// folder synchronised on this computer, which opens the save picker (or, with `open`, the open
+/// picker) in that folder; the service's app keeps the folder in step with the account, without
+/// Lusk Tab connecting to it. When the app isn't installed the button is greyed out. A help icon
+/// next to it says what to install. Returns the folder clicked.
+fn cloud_buttons(ui: &mut Ui, lang: Language, open: bool) -> Option<std::path::PathBuf> {
     let (onedrive, google) = crate::cloud::cloud_dirs(ui.ctx());
-    let services = [
-        (
-            "OneDrive",
-            onedrive,
-            "To use OneDrive, the OneDrive app must be installed on this computer and signed in to your Microsoft account (it comes with Windows). Lusk Tab then saves in your OneDrive folder, and OneDrive sends the workbook online.",
-        ),
-        (
-            "Google Drive",
-            google,
-            "To use Google Drive, the free Google Drive for desktop app must be installed on this computer and signed in to your Google account. Lusk Tab then saves in My Drive, and Google Drive sends the workbook online: you find it in your Google Drive space.",
-        ),
-    ];
+    let services = if open {
+        [
+            (
+                "OneDrive",
+                onedrive,
+                "To use OneDrive, the OneDrive app must be installed on this computer and signed in to your Microsoft account (it comes with Windows). Lusk Tab then opens the workbooks of your OneDrive folder, which OneDrive keeps up to date with your account.",
+            ),
+            (
+                "Google Drive",
+                google,
+                "To use Google Drive, the free Google Drive for desktop app must be installed on this computer and signed in to your Google account. Lusk Tab then opens the workbooks of My Drive, which Google Drive keeps up to date with your account.",
+            ),
+        ]
+    } else {
+        [
+            (
+                "OneDrive",
+                onedrive,
+                "To use OneDrive, the OneDrive app must be installed on this computer and signed in to your Microsoft account (it comes with Windows). Lusk Tab then saves in your OneDrive folder, and OneDrive sends the workbook online.",
+            ),
+            (
+                "Google Drive",
+                google,
+                "To use Google Drive, the free Google Drive for desktop app must be installed on this computer and signed in to your Google account. Lusk Tab then saves in My Drive, and Google Drive sends the workbook online: you find it in your Google Drive space.",
+            ),
+        ]
+    };
+    let tip_text = if open { "Open from your {service} space ({folder})" } else { "Save to your {service} space ({folder})" };
     let mut clicked = None;
     for (service, dirs, help) in services {
         if dirs.is_empty() {
@@ -581,8 +601,7 @@ fn cloud_buttons(ui: &mut Ui, lang: Language) -> Option<std::path::PathBuf> {
             continue;
         }
         for (label, dir) in dirs {
-            let tip =
-                lang.tr("Save to your {service} space ({folder})").replace("{service}", service).replace("{folder}", &dir.display().to_string());
+            let tip = lang.tr(tip_text).replace("{service}", service).replace("{folder}", &dir.display().to_string());
             if square_button(ui, Icon::Cloud, &label).on_hover_text(tip).clicked() {
                 clicked = Some(dir);
             }
@@ -630,6 +649,45 @@ fn square_button_state(ui: &mut Ui, icon: Icon, label: &str, enabled: bool) -> e
 
 // ---------------------------------------------------------------- pages
 
+/// Lusk Tab (repris de Lusk Texte) : le titre de Fichier › Accueil, le renard de lusk.bzh à
+/// gauche d'un message de bienvenue selon l'heure.
+fn greeting(ui: &mut Ui, lang: Language) {
+    let t = Tokens::get(ui.ctx());
+    let hour = gridcraft_engine::core::date::local_hour();
+    let text = if hour < 12 {
+        "Good morning"
+    } else if hour < 18 {
+        "Good afternoon"
+    } else {
+        "Good evening"
+    };
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing = vec2(12.0, 0.0);
+        let fox = lusk_fox(ui.ctx());
+        ui.add(egui::Image::new(&fox).fit_to_exact_size(vec2(44.0, 44.0)).alt_text("Lusk"));
+        ui.label(RichText::new(lang.tr(text)).font(theme::ui_font(28.0)).color(t.text));
+    });
+}
+
+/// Lusk Tab : la texture du renard de lusk.bzh, chargée une fois. Une image illisible
+/// (impossible avec le fichier intégré) donne un carré transparent, jamais un plantage.
+fn lusk_fox(ctx: &egui::Context) -> egui::TextureHandle {
+    let id = egui::Id::unique("lusk_fox");
+    if let Some(h) = ctx.data(|d| d.get_temp::<egui::TextureHandle>(id)) {
+        return h;
+    }
+    let img = image::load_from_memory(include_bytes!("../../../assets/avatar/lusk-renard.png"))
+        .map(|i| i.to_rgba8())
+        .unwrap_or_else(|_| image::RgbaImage::from_pixel(1, 1, image::Rgba([0, 0, 0, 0])));
+    let h = ctx.load_texture(
+        "lusk_fox",
+        egui::ColorImage::from_rgba_unmultiplied([img.width() as usize, img.height() as usize], img.as_raw()),
+        egui::TextureOptions::LINEAR,
+    );
+    ctx.data_mut(|d| d.insert_temp(id, h.clone()));
+    h
+}
+
 fn home(app: &mut SheetApp, ui: &mut Ui, bs: &mut Backstage, out: &mut Outcome) {
     let lang = app.ui.language;
     section(ui, lang, "New");
@@ -651,9 +709,23 @@ fn new_page(app: &mut SheetApp, ui: &mut Ui, out: &mut Outcome) {
 
 fn open_page(app: &mut SheetApp, ui: &mut Ui, bs: &mut Backstage, out: &mut Outcome) {
     let lang = app.ui.language;
-    if square_button(ui, Icon::OpenFolder, lang.tr("Browse…")).clicked() {
+    // Lusk Tab: Browse…, then a button per OneDrive and Google Drive folder (as in Save As).
+    let mut chosen: Option<Option<std::path::PathBuf>> = None;
+    ui.horizontal_wrapped(|ui| {
+        if square_button(ui, Icon::OpenFolder, lang.tr("Browse…")).clicked() {
+            chosen = Some(None);
+        }
+        if app.services.pick_open_in.is_some() {
+            ui.add_space(10.0);
+            if let Some(dir) = cloud_buttons(ui, lang, true) {
+                chosen = Some(Some(dir));
+            }
+        }
+    });
+    if let Some(dir) = chosen {
         let before = app.session.active().map(|d| d.uid);
-        app.open_dialog("open", json!({}));
+        let params = dir.as_ref().map_or_else(|| json!({}), |d| json!({"dir": d.to_string_lossy()}));
+        app.open_dialog("open", params);
         // Desktop pickers return at once; the web picker delivers later (see `SheetApp::logic`).
         if app.session.active().map(|d| d.uid) != before {
             out.close = true;
@@ -784,7 +856,7 @@ fn save_as(app: &mut SheetApp, ui: &mut Ui, bs: &mut Backstage, out: &mut Outcom
         }
         if !web && app.services.pick_save_in.is_some() {
             ui.add_space(10.0);
-            if let Some(dir) = cloud_buttons(ui, lang) {
+            if let Some(dir) = cloud_buttons(ui, lang, false) {
                 chosen = Some(Some(dir));
             }
         }

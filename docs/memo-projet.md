@@ -157,6 +157,26 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   - vérification des fonctions : un test tape chacune des fonctions du moteur sous son nom
     français et contrôle qu'elle est calculée (jamais #NOM?) et que chaque nom français mène à
     la bonne fonction (`crates/engine/tests/it/french_functions.rs`).
+- 12 novembre 2026, **Ouvrir avec OneDrive et Google Drive, accueil avec le renard,
+  confidentialité, auteur « Utilisateur », fenêtres de mise à jour en français** :
+  - Fichier › Ouvrir : les mêmes boutons OneDrive et Google Drive qu'Enregistrer sous ; ils ouvrent
+    la fenêtre d'ouverture de Windows dans ce dossier (service `pick_open_in`) ;
+  - Fichier › Accueil : le renard de lusk.bzh (`assets/avatar/lusk-renard.png`, repris de Lusk
+    Texte) à gauche de « Bonjour », « Bon après-midi » ou « Bonsoir » selon l'heure ;
+  - audit réseau (12 novembre 2026) : Lusk Tab n'utilise Internet que pour la recherche de mises à
+    jour (api.github.com, dépôt `declic29/LuskTab`, identifiant « Lusk Tab/Update », sans numéro de
+    version ni donnée personnelle) et le téléchargement d'une version acceptée. Les liens et les
+    boutons de l'aide passent par le navigateur après un clic. SERVICEWEB et FILTRE.XML renvoient
+    #VALEUR!, « À partir du Web » n'existe pas, les cellules Python tournent sans réseau (Linux,
+    macOS) ou pas du tout (Windows), le canal de contrôle (`--control`) n'écoute que 127.0.0.1 avec
+    une clé. Page **Aide › Confidentialité** (`dialogs/help.rs`, `privacy`), reliée à l'aide et à
+    Fichier › Mises à jour ;
+  - nom d'auteur par défaut « Utilisateur » (`DEFAULT_USER_NAME`, l'ancien « Lusk Tab User » des
+    préférences enregistrées est remplacé au démarrage), modifiable dans Options › Général › Nom
+    d'utilisateur ;
+  - fenêtres de mise à jour de craft-update en français : traducteur `translate` dans
+    `updates_ui.rs`, textes dans `i18n/fr.rs` ; images de contrôle avec
+    `LUSK_UPDATE_SHOTS=<dossier> cargo test -p gridcraft-ui-egui update_windows_pictures`.
 
 ## À faire (dans l'ordre du cahier des charges)
 
@@ -164,10 +184,8 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
    `ArtCraft\GridCraft`, éditeur), macOS (`package.sh`, nom de l'app, DMG : le fond
    `packaging/macos/dmg/background.svg` pointait vers l'ancienne icône SVG, à refaire),
    `sign.ps1`, `flatpak-oci.sh`.
-2. Accueil avec le renard, OneDrive et Google Drive aussi dans Fichier › Ouvrir.
-3. Page Confidentialité (après un audit réseau).
-4. Installateurs en français et workflow « Publication » (repris de Lusk Texte).
-5. Version 1.0.0.
+2. Installateurs en français et workflow « Publication » (repris de Lusk Texte).
+3. Version 1.0.0.
 
 ## Façon de travailler avec Claude
 

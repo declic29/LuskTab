@@ -6,7 +6,7 @@ use super::cond_format_rules::manage_rules;
 use super::data::{advanced_filter_form, data_validation_form, sort};
 use super::find::{find, go_to};
 use super::format_cells::format_cells;
-use super::help::help;
+use super::help::{help, privacy};
 use super::insert_function::insert_function;
 use super::names::{name_manager, paste_name};
 use super::paste::{paste_special, paste_special_shortcuts};
@@ -207,6 +207,7 @@ pub fn show(app: &mut SheetApp, ctx: &egui::Context) {
                 "spelling" => spelling(app, ui, &mut d, &mut open),
                 "thesaurus" => thesaurus(app, ui, &mut d, &mut open),
                 "help" => help(app, ui, &mut d, &mut open),
+        "privacy" => privacy(app, ui, &mut d, &mut open),
                 "assignAction" => crate::control_ui::assign_dialog(app, ui, &mut d, &mut open),
                 "formatControl" => crate::control_ui::format_dialog(app, ui, &mut d, &mut open),
                 "controlQuestion" => crate::control_ui::question_dialog(app, ui, &mut d, &mut open),

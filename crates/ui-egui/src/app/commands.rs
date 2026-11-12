@@ -372,7 +372,13 @@ impl SheetApp {
         }
         match name {
             "open" => {
-                if let Some(start) = &self.services.open_async {
+                // Lusk Tab: `dir` opens the picker in that folder (a OneDrive or Google Drive folder).
+                let dir = params.get("dir").and_then(Json::as_str).filter(|d| !d.is_empty()).map(std::path::PathBuf::from);
+                if let (Some(dir), Some(pick_in)) = (&dir, &self.services.pick_open_in) {
+                    if let Some(path) = pick_in(dir) {
+                        self.open_path(&path);
+                    }
+                } else if let Some(start) = &self.services.open_async {
                     start();
                 } else if let Some(pick) = &self.services.pick_open
                     && let Some(path) = pick()

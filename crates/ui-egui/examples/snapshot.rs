@@ -130,10 +130,13 @@ fn main() {
                 app.ui(ui);
             },
             {
-                // A save picker that opens in a folder, so File › Save As shows the OneDrive and
-                // Google Drive buttons (it never opens: a snapshot doesn't click).
-                let services =
-                    gridcraft_ui_egui::Services { pick_save_in: Some(Box::new(|_: &str, _: &std::path::Path| None)), ..Default::default() };
+                // Pickers that open in a folder, so File › Open and Save As show the OneDrive and
+                // Google Drive buttons (they never open: a snapshot doesn't click).
+                let services = gridcraft_ui_egui::Services {
+                    pick_save_in: Some(Box::new(|_: &str, _: &std::path::Path| None)),
+                    pick_open_in: Some(Box::new(|_: &std::path::Path| None)),
+                    ..Default::default()
+                };
                 let mut app = SheetApp::new(session, services);
                 app.ui.dark = dark;
                 if let Some(code) = &language

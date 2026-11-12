@@ -48,3 +48,15 @@ fn opening_and_resaving_preserves_the_existing_workbook_author() {
 
     assert_eq!(reopened.props.author, "Original Spreadsheet Author");
 }
+
+/// Lusk Tab : l'auteur par défaut est « Utilisateur », et des préférences enregistrées avec
+/// l'ancien nom par défaut passent à ce nom ; un nom choisi reste.
+#[test]
+fn default_author_is_utilisateur() {
+    use gridcraft_engine::Prefs;
+    assert_eq!(Prefs::default().user_name, "Utilisateur");
+    let old = Prefs { user_name: "Lusk Tab User".into(), ..Prefs::default() };
+    assert_eq!(old.upgraded().user_name, "Utilisateur");
+    let chosen = Prefs { user_name: "Philippe".into(), ..Prefs::default() };
+    assert_eq!(chosen.upgraded().user_name, "Philippe");
+}

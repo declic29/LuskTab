@@ -15,6 +15,22 @@ pub(super) fn options(app: &mut SheetApp, ui: &mut Ui) {
     if ui.checkbox(&mut formula_bar, lang.tr("Show formula bar")).changed() {
         app.run_or_alert("view.formulaBar", json!({"on": formula_bar}));
     }
+    // Lusk Tab : le nom inscrit comme auteur des commentaires, des notes et des nouveaux
+    // classeurs (Excel : Nom d'utilisateur). Vide, il redevient « Utilisateur ».
+    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        let label = ui.label(lang.tr("User name"));
+        let mut name = app.session.prefs.user_name.clone();
+        let edit = ui.add(egui::TextEdit::singleline(&mut name).desired_width(220.0)).labelled_by(label.id);
+        if edit.changed() {
+            app.session.prefs.user_name = name;
+        }
+        if edit.lost_focus() && app.session.prefs.user_name.trim().is_empty() {
+            app.session.prefs.user_name = gridcraft_engine::DEFAULT_USER_NAME.into();
+        }
+    })
+    .response
+    .on_hover_text(lang.tr("The name written as the author of comments, notes and new workbooks"));
     let mut highlight_row = app.ui.highlight_active_row;
     if ui.checkbox(&mut highlight_row, lang.tr("Highlight the active cell's row")).changed() {
         app.run_or_alert("options.highlightActiveRow", json!({"on": highlight_row}));

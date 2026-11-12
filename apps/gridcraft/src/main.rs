@@ -166,9 +166,9 @@ fn load_prefs(app: &mut SheetApp) {
         app.ui.language = language;
     }
     if let Ok(b) = std::fs::read(dir.join("prefs.json"))
-        && let Ok(p) = serde_json::from_slice(&b)
+        && let Ok(p) = serde_json::from_slice::<gridcraft_engine::Prefs>(&b)
     {
-        app.session.prefs = p;
+        app.session.prefs = p.upgraded();
     }
 }
 
@@ -216,17 +216,9 @@ fn services() -> Services {
             let image = read_clipboard(&image_clipboard, |clipboard| clipboard.get_image())?;
             image::RgbaImage::from_raw(u32::try_from(image.width).ok()?, u32::try_from(image.height).ok()?, image.bytes.into_owned())
         })),
-        pick_open: Some(Box::new(|| {
-            rfd::FileDialog::new()
-                .add_filter("Spreadsheets", &["xlsx", "xlsm", "xls", "xlsb", "ods", "csv", "tsv", "txt", "slk", "json"])
-                .add_filter("Excel Workbook", &["xlsx", "xlsm"])
-                .add_filter("Excel 97-2003 Workbook (import)", &["xls"])
-                .add_filter("Excel Binary Workbook (data import)", &["xlsb"])
-                .add_filter("OpenDocument Spreadsheet (data import)", &["ods"])
-                .add_filter("CSV", &["csv"])
-                .pick_file()
-                .and_then(|p| p.to_str().map(str::to_string))
-        })),
+        pick_open: Some(Box::new(|| open_picker(None))),
+        // Lusk Tab: File › Open › OneDrive or Google Drive opens the picker in that folder.
+        pick_open_in: Some(Box::new(|dir: &std::path::Path| open_picker(Some(dir)))),
         pick_picture: Some(Box::new(|| {
             rfd::FileDialog::new()
                 .add_filter("Pictures (PNG, JPEG)", &["png", "jpg", "jpeg"])
@@ -244,6 +236,22 @@ fn services() -> Services {
 }
 
 /// The system Save dialog for `suggested` (its type first), opened in `dir` when given.
+/// The system Open dialog with the workbook types, in `dir` when given (Lusk Tab: a OneDrive or
+/// Google Drive folder).
+fn open_picker(dir: Option<&std::path::Path>) -> Option<String> {
+    let mut dialog = rfd::FileDialog::new()
+        .add_filter("Spreadsheets", &["xlsx", "xlsm", "xls", "xlsb", "ods", "csv", "tsv", "txt", "slk", "json"])
+        .add_filter("Excel Workbook", &["xlsx", "xlsm"])
+        .add_filter("Excel 97-2003 Workbook (import)", &["xls"])
+        .add_filter("Excel Binary Workbook (data import)", &["xlsb"])
+        .add_filter("OpenDocument Spreadsheet (data import)", &["ods"])
+        .add_filter("CSV", &["csv"]);
+    if let Some(dir) = dir {
+        dialog = dialog.set_directory(dir);
+    }
+    dialog.pick_file().and_then(|p| p.to_str().map(str::to_string))
+}
+
 fn save_picker(suggested: &str, dir: Option<&std::path::Path>) -> Option<String> {
     let path = std::path::Path::new(suggested);
     let stem = path.file_stem().and_then(std::ffi::OsStr::to_str).unwrap_or("Book1").to_string();
@@ -419,6 +427,20 @@ fn main() -> eframe::Result<()> {
     // workbook, no preferences) and on macOS, where the built-in title bar is set up as the
     // window is created.
     let splash = cfg!(not(target_os = "macos")) && !no_splash && control_port.is_none() && sample.is_none() && prefs_enabled();
+    log::info!(
+        "écran d'accueil : {}",
+        if splash {
+            "affiché".to_string()
+        } else {
+            format!(
+                "non affiché (macOS {}, --no-splash ou LUSK_NO_SPLASH {no_splash}, canal de contrôle {}, exemple {}, préférences {})",
+                cfg!(target_os = "macos"),
+                control_port.is_some(),
+                sample.is_some(),
+                prefs_enabled()
+            )
+        }
+    );
     if splash {
         viewport = viewport
             .with_decorations(false)

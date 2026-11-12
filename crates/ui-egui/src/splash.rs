@@ -71,6 +71,7 @@ impl Splash {
         let ctx = ui.ctx().clone();
         let now = ctx.input(|i| i.time);
         let start = *self.start.get_or_insert_with(|| {
+            log::info!("écran d'accueil : première image, {:?} points à l'échelle {}", ctx.content_rect().size(), ctx.pixels_per_point());
             load_dictionaries(self.dictionaries.clone());
             now
         });
@@ -111,6 +112,9 @@ impl Splash {
         paint(ui, Paint { alpha, logo, progress: self.shown, status, text: self.frames >= 1 });
         self.frames = self.frames.saturating_add(1);
         let done = self.full_at.is_some_and(|f| now - f >= HOLD + if self.still { 0.0 } else { FADE_OUT });
+        if done {
+            log::info!("écran d'accueil : terminé après {t:.2} s et {} images", self.frames);
+        }
         if !done {
             ctx.request_repaint();
         }

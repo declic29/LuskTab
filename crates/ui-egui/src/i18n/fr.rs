@@ -2003,6 +2003,62 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Getting started with Lusk Tab: formulas, shortcuts, files, where to get help" => {
             "Bien démarrer avec Lusk Tab : formules, raccourcis, fichiers, où trouver de l'aide"
         }
+        "v{from} to {to}" => "v{from} vers {to}",
+        "Downloading and installing update…" => "Téléchargement et installation de la mise à jour…",
+        "{app} {version} is available with the latest features and bug fixes." => {
+            "{app} {version} est disponible, avec les dernières nouveautés et corrections."
+        }
+        "What's new" => "Nouveautés",
+        "Restart to Update" => "Redémarrer pour mettre à jour",
+        "Update and Restart" => "Mettre à jour et redémarrer",
+        "Later" => "Plus tard",
+        "Update" => "Mise à jour",
+        "by {developer}" => "par {developer}",
+        "Check Again" => "Rechercher à nouveau",
+        "Checking for updates…" => "Recherche des mises à jour…",
+        "Installing update…" => "Installation de la mise à jour…",
+        "Update ready. Close {app} to install it." => "La mise à jour est prête. Fermez {app} pour l'installer.",
+        "The update is installed. Close {app} to finish; it restarts by itself." => {
+            "La mise à jour est installée. Fermez {app} pour terminer ; il redémarrera tout seul."
+        }
+        "{app} {version} follows the version chosen in the launcher, so it does not update itself." => {
+            "{app} {version} suit la version choisie dans le lanceur : il ne se met pas à jour lui-même."
+        }
+        "{app} updated to {version}." => "{app} a été mis à jour en version {version}.",
+        "The update could not be installed: {reason}" => "La mise à jour n'a pas pu être installée : {reason}",
+        "{app} {version} is the newest version available." => "{app} {version} est la version la plus récente.",
+        "Could not check for updates." => "Impossible de rechercher les mises à jour.",
+        "All releases are listed at {url}" => "Toutes les versions sont sur {url}",
+        "Cannot auto-update this installation type. Please download manually." => {
+            "Ce type d'installation ne se met pas à jour tout seul. Téléchargez la nouvelle version vous-même."
+        }
+        "Close {app} to finish" => "Fermez {app} pour terminer",
+        "Close {app}" => "Fermer {app}",
+        "Couldn't start the update ({error})" => "Impossible de lancer la mise à jour ({error})",
+        "Save or close your open work first; the update restarts the app." => {
+            "Enregistrez ou fermez d'abord vos classeurs : la mise à jour redémarre l'application."
+        }
+        "The update failed unexpectedly." => "La mise à jour a échoué de façon inattendue.",
+        "The update stopped unexpectedly." => "La mise à jour s'est arrêtée de façon inattendue.",
+        "To use OneDrive, the OneDrive app must be installed on this computer and signed in to your Microsoft account (it comes with Windows). Lusk Tab then opens the workbooks of your OneDrive folder, which OneDrive keeps up to date with your account." => {
+            "Pour utiliser OneDrive, l'application OneDrive doit être installée sur cet ordinateur et connectée à votre compte Microsoft (elle est fournie avec Windows). Lusk Tab ouvre alors les classeurs de votre dossier OneDrive, que OneDrive tient à jour avec votre compte."
+        }
+        "To use Google Drive, the free Google Drive for desktop app must be installed on this computer and signed in to your Google account. Lusk Tab then opens the workbooks of My Drive, which Google Drive keeps up to date with your account." => {
+            "Pour utiliser Google Drive, l'application gratuite « Google Drive pour ordinateur » doit être installée sur cet ordinateur et connectée à votre compte Google. Lusk Tab ouvre alors les classeurs de « Mon Drive », que Google Drive tient à jour avec votre compte."
+        }
+        "Open from your {service} space ({folder})" => "Ouvrir depuis votre espace {service} ({folder})",
+        "Good morning" => "Bonjour",
+        "Good afternoon" => "Bon après-midi",
+        "Good evening" => "Bonsoir",
+        "Your data and your privacy" => "Vos données et votre vie privée",
+        "Privacy" => "Confidentialité",
+        "What stays on your computer and the only times Lusk Tab uses the Internet" => {
+            "Ce qui reste sur votre ordinateur et les seuls moments où Lusk Tab utilise Internet"
+        }
+        "User name" => "Nom d'utilisateur",
+        "The name written as the author of comments, notes and new workbooks" => {
+            "Le nom inscrit comme auteur des commentaires, des notes et des nouveaux classeurs"
+        }
         _ => return None,
     })
 }

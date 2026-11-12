@@ -396,6 +396,13 @@ impl DocState {
     }
 }
 
+/// Lusk Tab : le nom d'auteur par défaut, inscrit dans les commentaires et les propriétés des
+/// classeurs tant que l'utilisateur n'a pas donné le sien (Options › Général).
+pub const DEFAULT_USER_NAME: &str = "Utilisateur";
+/// Les anciens noms par défaut : des préférences enregistrées avec l'un d'eux passent à
+/// [`DEFAULT_USER_NAME`].
+const FORMER_DEFAULT_USER_NAMES: [&str; 2] = ["Lusk Tab User", "GridCraft User"];
+
 /// Engine-side preferences.
 #[derive(Clone, Debug, Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -441,12 +448,23 @@ impl Default for StatusBarStats {
     }
 }
 
+impl Prefs {
+    /// Lusk Tab : des préférences enregistrées par une version précédente, à jour (l'ancien nom
+    /// d'auteur par défaut devient « Utilisateur » ; un nom choisi reste).
+    pub fn upgraded(mut self) -> Self {
+        if FORMER_DEFAULT_USER_NAMES.contains(&self.user_name.as_str()) {
+            self.user_name = DEFAULT_USER_NAME.into();
+        }
+        self
+    }
+}
+
 impl Default for Prefs {
     fn default() -> Self {
         Prefs {
             enter_direction: "down".into(),
             autocomplete: true,
-            user_name: "Lusk Tab User".into(),
+            user_name: DEFAULT_USER_NAME.into(),
             default_font: gridcraft_model::DEFAULT_FONT.into(),
             default_font_size: gridcraft_model::DEFAULT_FONT_SIZE,
             sheets_in_new_workbook: 1,

@@ -19,8 +19,15 @@ pub(crate) struct Runtime {
 
 impl Default for Runtime {
     fn default() -> Self {
-        Self { updater: Updater::new(&crate::UPDATE_APP, VERSION), startup: false, manual: false }
+        Self { updater: Updater::new(&crate::UPDATE_APP, VERSION).with_translator(translate), startup: false, manual: false }
     }
+}
+
+/// Lusk Tab : les fenêtres de mise à jour (la proposition au démarrage et le résultat d'une
+/// recherche) dans la langue de l'interface. Leurs textes anglais sont les clés du catalogue,
+/// leurs `{valeurs}` remplies après la traduction.
+fn translate(text: &str, args: &[(&str, &str)]) -> String {
+    craft_update::translate::fill(crate::i18n::tr_now(text), args)
 }
 
 /// Ask for a check; the next frame's `tick` starts it. A manual one reports every outcome.
@@ -71,7 +78,7 @@ pub(crate) fn show(app: &mut SheetApp, ctx: &egui::Context) {
     let on_page = app.backstage.as_ref().is_some_and(|b| b.page == crate::backstage::Page::Updates);
     let rt = &mut app.updates_rt;
     if !on_page && result_window_shows(rt.updater.status(), rt.updater.prompt_open()) {
-        match craft_update::CheckResultDialog::new(&crate::UPDATE_APP, VERSION).show(ctx, rt.updater.status()) {
+        match craft_update::CheckResultDialog::new(&crate::UPDATE_APP, VERSION).with_translator(translate).show(ctx, rt.updater.status()) {
             CheckResultResponse::Close => rt.updater.dismiss_status(),
             CheckResultResponse::CheckAgain => rt.updater.check_now(ctx),
             // The next `show_if` asks the window to close once nothing is unsaved.
@@ -138,6 +145,9 @@ pub(crate) fn page(app: &mut SheetApp, ui: &mut egui::Ui) {
     );
     ui.add_space(8.0);
     text(ui, "Seul le numéro de la dernière version est demandé : aucun classeur ni aucune donnée personnelle n'est envoyé.");
+    if ui.link("Vos données et votre vie privée").clicked() {
+        app.open_dialog("privacy", serde_json::json!({}));
+    }
 }
 
 #[cfg(test)]
@@ -161,5 +171,62 @@ mod tests {
             assert!(!result_window_shows(status, true), "{status:?} over the prompt");
         }
         assert!(!result_window_shows(&Status::Idle, false));
+    }
+
+    #[test]
+    fn update_windows_speak_french() {
+        let ctx = egui::Context::default();
+        crate::i18n::set_current(&ctx, crate::i18n::Language::Fr);
+        assert_eq!(super::translate("Later", &[]), "Plus tard");
+        assert_eq!(
+            super::translate("{app} {version} is the newest version available.", &[("app", "Lusk Tab"), ("version", "1.0.0")]),
+            "Lusk Tab 1.0.0 est la version la plus récente."
+        );
+        assert!(super::translate(craft_update::updater::READY_TEXT, &[("app", "Lusk Tab")]).contains("Fermez Lusk Tab"));
+        crate::i18n::set_current(&ctx, crate::i18n::Language::En);
+    }
+
+    /// Les fenêtres de mise à jour en français, dessinées en PNG pour les relire :
+    /// `LUSK_UPDATE_SHOTS=<dossier> cargo test -p gridcraft-ui-egui update_windows_pictures`.
+    /// Sans la variable, le test ne fait rien.
+    #[test]
+    fn update_windows_pictures() {
+        use craft_update::dialog::{CheckResultDialog, StartupPrompt};
+        use craft_update::release::Release;
+        let Some(dir) = std::env::var_os("LUSK_UPDATE_SHOTS").map(std::path::PathBuf::from) else { return };
+        std::fs::create_dir_all(&dir).unwrap();
+        let states: [(&str, Option<Status>); 5] = [
+            ("recherche", Some(Status::Checking)),
+            ("a-jour", Some(Status::UpToDate)),
+            ("echec", Some(Status::Failed("délai dépassé".into()))),
+            ("prete", Some(Status::Ready)),
+            ("proposition", None),
+        ];
+        for (name, status) in states {
+            let dialog = CheckResultDialog::new(&crate::UPDATE_APP, "0.19.1").with_translator(super::translate);
+            let mut prompt = StartupPrompt::new(
+                &crate::UPDATE_APP,
+                Release { version: craft_update::version::parse("1.0.0"), tag: "v1.0.0".into(), ..Release::default() },
+                "0.19.1",
+            )
+            .with_translator(super::translate);
+            let mut h = egui_kittest::Harness::builder()
+                .with_size(egui::vec2(620.0, 380.0))
+                .with_context_setup(|ctx| crate::SheetApp::setup_context_for_language(ctx, false, crate::i18n::Language::Fr))
+                .wgpu()
+                .build_ui(|ui| {
+                    crate::i18n::set_current(ui.ctx(), crate::i18n::Language::Fr);
+                    match &status {
+                        Some(status) => {
+                            dialog.show(ui.ctx(), status);
+                        }
+                        None => {
+                            prompt.show(ui.ctx());
+                        }
+                    }
+                });
+            h.run_steps(4);
+            h.render().unwrap().save(dir.join(format!("maj-{name}.png"))).unwrap();
+        }
     }
 }

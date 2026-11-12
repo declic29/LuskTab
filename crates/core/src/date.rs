@@ -59,6 +59,20 @@ pub fn unix_now_ms() -> Option<f64> {
     }
 }
 
+/// Lusk Tab: the hour (0–23) on this computer's clock, for the greeting on File › Home. 9 in
+/// the browser, where the greeting stays "Bonjour".
+pub fn local_hour() -> u32 {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use chrono::Timelike;
+        chrono::Local::now().hour()
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        9
+    }
+}
+
 /// Date serial (1900 system, with fraction) for a Unix time in milliseconds.
 pub fn serial_from_unix_ms(ms: f64) -> f64 {
     25569.0 + ms / 86_400_000.0
