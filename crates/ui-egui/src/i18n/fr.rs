@@ -1804,6 +1804,15 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Thesaurus|Insert" => "Insérer",
         "There is no thesaurus for this dictionary language." => "Il n'y a pas de dictionnaire des synonymes pour la langue du dictionnaire.",
         "No synonyms found." => "Aucun synonyme trouvé.",
+        "To use OneDrive, the OneDrive app must be installed on this computer and signed in to your Microsoft account (it comes with Windows). Lusk Tab then saves in your OneDrive folder, and OneDrive sends the workbook online." => {
+            "Pour utiliser OneDrive, l’application OneDrive doit être installée sur cet ordinateur et connectée à votre compte Microsoft (elle est fournie avec Windows). Lusk Tab enregistre alors dans votre dossier OneDrive, et OneDrive envoie le classeur en ligne."
+        }
+        "To use Google Drive, the free Google Drive for desktop app must be installed on this computer and signed in to your Google account. Lusk Tab then saves in My Drive, and Google Drive sends the workbook online: you find it in your Google Drive space." => {
+            "Pour utiliser Google Drive, l’application gratuite « Google Drive pour ordinateur » doit être installée sur cet ordinateur et connectée à votre compte Google. Lusk Tab enregistre alors dans « Mon Drive », et Google Drive envoie le classeur en ligne : vous le retrouvez dans votre espace Google Drive."
+        }
+        "{service} isn't installed on this computer." => "{service} n’est pas installé sur cet ordinateur.",
+        "Save to your {service} space ({folder})" => "Enregistrer dans votre espace {service} ({folder})",
+        "Help" => "Aide",
         _ => return None,
     })
 }

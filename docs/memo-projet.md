@@ -133,6 +133,14 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   `--sample`, `--no-splash` ou `LUSK_NO_SPLASH=1`. Textes à modifier en haut de
   `crates/ui-egui/src/splash.rs`. Photo : `cargo run -p gridcraft-ui-egui --example splash --
   sortie.png`.
+- 12 novembre 2026, **Enregistrer sous › OneDrive et Google Drive** (comme Lusk Texte) : à
+  côté de « Parcourir… », un bouton par dossier OneDrive et par « Mon Drive » de Google Drive
+  pour ordinateur trouvés sur l'ordinateur, grisé quand l'application n'est pas installée, avec
+  une icône « ? » qui dit quoi installer. Le bouton ouvre la fenêtre d'enregistrement de Windows
+  directement dans ce dossier (Lusk Tab n'a pas le navigateur intégré de Lusk Texte) ; vaut aussi
+  pour les copies CSV, page web et PDF. Aucune connexion à un compte : l'application du service
+  envoie le fichier en ligne. Code : `crates/ui-egui/src/cloud.rs`, `backstage.rs`
+  (`cloud_buttons`), service `pick_save_in`.
 
 ## À faire (dans l'ordre du cahier des charges)
 
@@ -140,7 +148,8 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
    `ArtCraft\GridCraft`, éditeur), macOS (`package.sh`, nom de l'app, DMG : le fond
    `packaging/macos/dmg/background.svg` pointait vers l'ancienne icône SVG, à refaire),
    `sign.ps1`, `flatpak-oci.sh`.
-2. Accueil avec le renard, page Mises à jour reliée à `declic29/LuskTab`, OneDrive et Google Drive.
+2. Accueil avec le renard, page Mises à jour reliée à `declic29/LuskTab`, OneDrive et Google Drive
+   aussi dans Fichier › Ouvrir.
 3. Aide en français et page Confidentialité (après un audit réseau).
 4. Installateurs en français et workflow « Publication » (repris de Lusk Texte).
 5. Version 1.0.0.

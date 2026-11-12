@@ -233,25 +233,33 @@ fn services() -> Services {
                 .pick_file()
                 .and_then(|p| p.to_str().map(str::to_string))
         })),
-        pick_save: Some(Box::new(|suggested: &str| {
-            let path = std::path::Path::new(suggested);
-            let stem = path.file_stem().and_then(std::ffi::OsStr::to_str).unwrap_or("Book1").to_string();
-            // The suggested name's type (an export asks for .pdf, .csv or .html) comes first.
-            const TYPES: [(&str, &str); 4] =
-                [("Excel Workbook (.xlsx)", "xlsx"), ("CSV UTF-8 (.csv)", "csv"), ("Web Page (.html)", "html"), ("PDF (.pdf)", "pdf")];
-            let ext = path.extension().and_then(std::ffi::OsStr::to_str).map(str::to_ascii_lowercase).filter(|e| TYPES.iter().any(|(_, x)| x == e));
-            let ext = ext.unwrap_or_else(|| "xlsx".to_string());
-            let mut dialog = rfd::FileDialog::new().set_file_name(format!("{stem}.{ext}"));
-            for (label, x) in TYPES.iter().filter(|(_, x)| *x == ext).chain(TYPES.iter().filter(|(_, x)| *x != ext)) {
-                dialog = dialog.add_filter(*label, &[*x]);
-            }
-            dialog.save_file().and_then(|p| p.to_str().map(str::to_string))
-        })),
+        pick_save: Some(Box::new(|suggested: &str| save_picker(suggested, None))),
+        // Lusk Tab: File › Save As › OneDrive or Google Drive opens the picker in that folder.
+        pick_save_in: Some(Box::new(|suggested: &str, dir: &std::path::Path| save_picker(suggested, Some(dir)))),
         open_url: Some(Box::new(|url: &str| open_with_system(url))),
         printers: Some(print::discover()),
         print_native: Some(print::submit()),
         ..Default::default()
     }
+}
+
+/// The system Save dialog for `suggested` (its type first), opened in `dir` when given.
+fn save_picker(suggested: &str, dir: Option<&std::path::Path>) -> Option<String> {
+    let path = std::path::Path::new(suggested);
+    let stem = path.file_stem().and_then(std::ffi::OsStr::to_str).unwrap_or("Book1").to_string();
+    // The suggested name's type (an export asks for .pdf, .csv or .html) comes first.
+    const TYPES: [(&str, &str); 4] =
+        [("Excel Workbook (.xlsx)", "xlsx"), ("CSV UTF-8 (.csv)", "csv"), ("Web Page (.html)", "html"), ("PDF (.pdf)", "pdf")];
+    let ext = path.extension().and_then(std::ffi::OsStr::to_str).map(str::to_ascii_lowercase).filter(|e| TYPES.iter().any(|(_, x)| x == e));
+    let ext = ext.unwrap_or_else(|| "xlsx".to_string());
+    let mut dialog = rfd::FileDialog::new().set_file_name(format!("{stem}.{ext}"));
+    if let Some(dir) = dir {
+        dialog = dialog.set_directory(dir);
+    }
+    for (label, x) in TYPES.iter().filter(|(_, x)| *x == ext).chain(TYPES.iter().filter(|(_, x)| *x != ext)) {
+        dialog = dialog.add_filter(*label, &[*x]);
+    }
+    dialog.save_file().and_then(|p| p.to_str().map(str::to_string))
 }
 
 /// Opens a URL or file with the system's default application.

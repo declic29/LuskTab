@@ -541,17 +541,79 @@ fn action_row(ui: &mut Ui, icon: Icon, title: &str, detail: &str) -> egui::Respo
     resp
 }
 
+/// Lusk Tab (from Lusk Texte): the online spaces, OneDrive then Google Drive. Each has a button per
+/// folder synchronised on this computer, which opens the save picker in that folder; the service's
+/// app then sends the file online, without Lusk Tab connecting to the account. When the app isn't
+/// installed the button is greyed out. A help icon next to it says what to install. Returns the
+/// folder clicked.
+fn cloud_buttons(ui: &mut Ui, lang: Language) -> Option<std::path::PathBuf> {
+    let (onedrive, google) = crate::cloud::cloud_dirs(ui.ctx());
+    let services = [
+        (
+            "OneDrive",
+            onedrive,
+            "To use OneDrive, the OneDrive app must be installed on this computer and signed in to your Microsoft account (it comes with Windows). Lusk Tab then saves in your OneDrive folder, and OneDrive sends the workbook online.",
+        ),
+        (
+            "Google Drive",
+            google,
+            "To use Google Drive, the free Google Drive for desktop app must be installed on this computer and signed in to your Google account. Lusk Tab then saves in My Drive, and Google Drive sends the workbook online: you find it in your Google Drive space.",
+        ),
+    ];
+    let mut clicked = None;
+    for (service, dirs, help) in services {
+        if dirs.is_empty() {
+            square_button_state(ui, Icon::Cloud, service, false)
+                .on_hover_text(lang.tr("{service} isn't installed on this computer.").replace("{service}", service));
+            help_hint(ui, lang.tr(help));
+            ui.add_space(6.0);
+            continue;
+        }
+        for (label, dir) in dirs {
+            let tip =
+                lang.tr("Save to your {service} space ({folder})").replace("{service}", service).replace("{folder}", &dir.display().to_string());
+            if square_button(ui, Icon::Cloud, &label).on_hover_text(tip).clicked() {
+                clicked = Some(dir);
+            }
+            help_hint(ui, lang.tr(help));
+            ui.add_space(6.0);
+        }
+    }
+    clicked
+}
+
+/// Lusk Tab: a small help icon (?) whose tooltip explains `text`.
+fn help_hint(ui: &mut Ui, text: &str) {
+    // Translated before `widget_info`, whose closure runs while the context is locked.
+    let name = crate::i18n::tr(ui, "Help").to_string();
+    let (r, resp) = ui.allocate_exact_size(vec2(18.0, 18.0), Sense::hover());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &name));
+    let t = Tokens::get(ui.ctx());
+    icons::paint(ui.painter(), r, Icon::Help, t.text_dim);
+    resp.on_hover_text(text);
+}
+
 /// A bordered square command button (Browse…, Print, Protect Workbook).
 fn square_button(ui: &mut Ui, icon: Icon, label: &str) -> egui::Response {
+    square_button_state(ui, icon, label, true)
+}
+
+/// [`square_button`], drawn greyed out when not `enabled` (a service that isn't installed).
+fn square_button_state(ui: &mut Ui, icon: Icon, label: &str, enabled: bool) -> egui::Response {
     let t = Tokens::get(ui.ctx());
-    let (rect, resp) = ui.allocate_exact_size(vec2(96.0, 88.0), Sense::click());
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
+    let (rect, resp) = ui.allocate_exact_size(vec2(96.0, 88.0), if enabled { Sense::click() } else { Sense::hover() });
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, enabled, label));
     let p = ui.painter();
-    p.rect_filled(rect, 6.0, if resp.hovered() { t.hover } else { t.ribbon });
-    p.rect_stroke(rect, 6.0, Stroke::new(1.0, if resp.hovered() { t.accent } else { t.ribbon_border }), StrokeKind::Inside);
-    icons::paint(p, Rect::from_center_size(pos2(rect.center().x, rect.top() + 32.0), vec2(30.0, 30.0)), icon, t.text);
-    let galley = p.layout(label.to_string(), theme::ui_font(12.0), t.text, rect.width() - 8.0);
-    p.galley(pos2(rect.center().x - galley.size().x / 2.0, rect.top() + 56.0), galley, t.text);
+    let ink = if enabled { t.text } else { t.text_dim };
+    let hovered = enabled && resp.hovered();
+    p.rect_filled(rect, 6.0, if hovered { t.hover } else { t.ribbon });
+    p.rect_stroke(rect, 6.0, Stroke::new(1.0, if hovered { t.accent } else { t.ribbon_border }), StrokeKind::Inside);
+    let icon_rect = Rect::from_center_size(pos2(rect.center().x, rect.top() + 32.0), vec2(30.0, 30.0));
+    // The cloud is OneDrive's blue when it can be used, grey otherwise.
+    let icon_ink = if icon == Icon::Cloud && enabled { Color32::from_rgb(0x1E, 0x78, 0xD4) } else { ink };
+    icons::paint(p, icon_rect, icon, icon_ink);
+    let galley = p.layout(label.to_string(), theme::ui_font(12.0), ink, rect.width() - 8.0);
+    p.galley(pos2(rect.center().x - galley.size().x / 2.0, rect.top() + 56.0), galley, ink);
     resp
 }
 
@@ -703,15 +765,31 @@ fn save_as(app: &mut SheetApp, ui: &mut Ui, bs: &mut Backstage, out: &mut Outcom
     // Desktop: the system Save dialog. Web: the file downloads.
     let web = app.services.pick_save.is_none() && app.services.download.is_some();
     let label = if web { format!("{} (.{fmt})", lang.tr("Download")) } else { lang.tr("Browse…").to_string() };
-    if square_button(ui, Icon::OpenFolder, &label).clicked() && app.commit_edit(0, 0, false, false) {
+    // Lusk Tab: Browse…, then a button per OneDrive and Google Drive folder (as in Lusk Texte).
+    let mut chosen: Option<Option<std::path::PathBuf>> = None;
+    ui.horizontal_wrapped(|ui| {
+        if square_button(ui, Icon::OpenFolder, &label).clicked() {
+            chosen = Some(None);
+        }
+        if !web && app.services.pick_save_in.is_some() {
+            ui.add_space(10.0);
+            if let Some(dir) = cloud_buttons(ui, lang) {
+                chosen = Some(Some(dir));
+            }
+        }
+    });
+    if let Some(dir) = chosen
+        && app.commit_edit(0, 0, false, false)
+    {
         if fmt == "xlsx" {
             let before = app.session.active().map(|d| (d.path.clone(), d.is_dirty()));
-            app.open_dialog("saveAs", json!({}));
+            let params = dir.as_ref().map_or_else(|| json!({}), |d| json!({"dir": d.to_string_lossy()}));
+            app.open_dialog("saveAs", params);
             let after = app.session.active().map(|d| (d.path.clone(), d.is_dirty()));
             if after != before || app.services.pick_save.is_none() {
                 out.close = true;
             }
-        } else if export_as(app, fmt) {
+        } else if export_as_in(app, fmt, dir.as_deref()) {
             out.close = true;
         }
     }
@@ -741,6 +819,12 @@ fn export(app: &mut SheetApp, ui: &mut Ui, out: &mut Outcome) {
 /// Exports the active workbook as `pdf`, `csv` or `html`: through the save picker on the desktop,
 /// as a browser download on the web. Returns whether a file was written or handed over.
 pub fn export_as(app: &mut SheetApp, fmt: &str) -> bool {
+    export_as_in(app, fmt, None)
+}
+
+/// [`export_as`] with the save picker opened in `dir` (Lusk Tab: a OneDrive or Google Drive
+/// folder), when the host can do that.
+fn export_as_in(app: &mut SheetApp, fmt: &str, dir: Option<&std::path::Path>) -> bool {
     if !app.commit_edit(0, 0, false, false) {
         return false;
     }
@@ -752,8 +836,13 @@ pub fn export_as(app: &mut SheetApp, fmt: &str) -> bool {
     };
     let title = app.session.active().map(|d| d.display_title()).unwrap_or_else(|| "Book1".into());
     let stem = std::path::Path::new(&title).file_stem().and_then(std::ffi::OsStr::to_str).unwrap_or("Book1").to_string();
-    if let Some(pick) = &app.services.pick_save {
-        let Some(path) = pick(&format!("{stem}.{fmt}")) else { return false };
+    let picked = match (dir, &app.services.pick_save_in, &app.services.pick_save) {
+        (Some(dir), Some(pick_in), _) => Some(pick_in(&format!("{stem}.{fmt}"), dir)),
+        (_, _, Some(pick)) => Some(pick(&format!("{stem}.{fmt}"))),
+        _ => None,
+    };
+    if let Some(picked) = picked {
+        let Some(path) = picked else { return false };
         // The picker may suggest a workbook extension; the export writes the chosen format.
         let path = std::path::Path::new(&path).with_extension(fmt).to_string_lossy().into_owned();
         return match app.run(id, json!({"path": path})) {

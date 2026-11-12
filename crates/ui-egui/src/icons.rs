@@ -166,6 +166,10 @@ pub enum Icon {
     NewFile,
     OpenFolder,
     Info,
+    /// Lusk Tab: an online storage space (OneDrive, Google Drive).
+    Cloud,
+    /// Lusk Tab: a question mark in a circle, for a help tip.
+    Help,
     Print,
     /// A macro: a script page with a run arrow.
     Macro,
@@ -855,6 +859,17 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
         Icon::OpenFolder => {
             g.line(&[(13.0, 6.5), (13.0, 4.5), (7.5, 4.5), (6.0, 3.0), (1.5, 3.0), (1.5, 13.0)], c, 1.1);
             g.line(&[(1.5, 13.0), (4.0, 7.0), (15.0, 7.0), (12.5, 13.0), (1.5, 13.0)], c, 1.1);
+        }
+        Icon::Cloud => {
+            g.circle(5.0, 9.8, 2.9, Some(c), None);
+            g.circle(8.6, 7.4, 3.8, Some(c), None);
+            g.circle(11.8, 9.6, 3.0, Some(c), None);
+            g.rect(5.0, 9.4, 6.8, 3.4, Some(c), None);
+        }
+        Icon::Help => {
+            g.circle(8.0, 8.0, 6.5, None, Some(c));
+            g.line(&[(6.0, 6.3), (6.4, 5.1), (8.0, 4.4), (9.6, 5.0), (10.1, 6.3), (9.4, 7.6), (8.0, 8.4), (8.0, 9.8)], c, 1.3);
+            g.circle(8.0, 11.9, 0.8, Some(c), None);
         }
         Icon::Info => {
             g.circle(8.0, 8.0, 6.5, None, Some(c));

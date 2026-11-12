@@ -382,8 +382,15 @@ impl SheetApp {
             }
             "saveAs" => {
                 let suggested = self.session.active().map(|d| d.display_title()).unwrap_or_else(|| "Book1".into());
-                if let Some(pick) = &self.services.pick_save {
-                    if let Some(path) = pick(&suggested) {
+                // Lusk Tab: `dir` opens the picker in that folder (a OneDrive or Google Drive folder).
+                let dir = params.get("dir").and_then(Json::as_str).filter(|d| !d.is_empty()).map(std::path::PathBuf::from);
+                let picked = match (&dir, &self.services.pick_save_in, &self.services.pick_save) {
+                    (Some(dir), Some(pick_in), _) => Some(pick_in(&suggested, dir)),
+                    (_, _, Some(pick)) => Some(pick(&suggested)),
+                    _ => None,
+                };
+                if let Some(picked) = picked {
+                    if let Some(path) = picked {
                         let path = if std::path::Path::new(&path).extension().is_none() { format!("{path}.xlsx") } else { path };
                         self.run_or_alert("file.save", json!({"path": path}));
                     }

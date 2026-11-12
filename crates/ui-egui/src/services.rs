@@ -1,6 +1,7 @@
 use super::printing;
 
 type PickSave = Box<dyn Fn(&str) -> Option<String>>;
+type PickSaveIn = Box<dyn Fn(&str, &std::path::Path) -> Option<String>>;
 type OpenUrl = Box<dyn Fn(&str)>;
 type CopyHtml = Box<dyn FnMut(&str, &str) -> Result<(), String>>;
 type Download = Box<dyn Fn(&str, &[u8])>;
@@ -15,6 +16,9 @@ pub struct Services {
     pub print_native: Option<printing::Submit>,
     pub pick_open: Option<Box<dyn Fn() -> Option<String>>>,
     pub pick_save: Option<PickSave>,
+    /// Lusk Tab: the same save picker, opened in a given folder (File › Save As › OneDrive or
+    /// Google Drive).
+    pub pick_save_in: Option<PickSaveIn>,
     /// Native picture picker (PNG/JPEG), separate from workbook opening.
     pub pick_picture: Option<Box<dyn Fn() -> Option<String>>>,
     /// Browser picture picker. Each dialog owns its inbox, so canceled picks cannot
