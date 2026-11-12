@@ -21,13 +21,13 @@ fn copied_sheet_keeps_spill_values_through_full_recalc() {
     run(&mut s, "cell.set", json!({"cell": "J54", "input": "=SEQUENCE(5)*C6"}));
     run(&mut s, "selection.set", json!({"range": "15:15"}));
     run(&mut s, "sheet.move", json!({"copy": true, "sheet": 0, "to": 1}));
-    run(&mut s, "cell.set", json!({"array": true, "cell": "D3", "input": "=SUM('Grades (2)'!J54#)"}));
+    run(&mut s, "cell.set", json!({"array": true, "cell": "D3", "input": "=SUM('Adhérents (2)'!J54#)"}));
 
-    let before = value(&s, "Grades (2)", "J55");
+    let before = value(&s, "Adhérents (2)", "J55");
     assert!(matches!(before, Value::Number(_)), "J55 should hold a spilled number, got {before:?}");
 
     let mut fresh = (*s.doc().unwrap().wb).clone();
     Calc::new().recalc_all(&mut fresh);
-    let after = fresh.sheet(fresh.sheet_index("Grades (2)").unwrap()).unwrap().value(CellRef::parse("J55").unwrap());
+    let after = fresh.sheet(fresh.sheet_index("Adhérents (2)").unwrap()).unwrap().value(CellRef::parse("J55").unwrap());
     assert_eq!(before, after);
 }

@@ -21,6 +21,7 @@ mod cond_format_rules;
 mod data;
 mod find;
 mod format_cells;
+mod help;
 mod insert_function;
 mod names;
 mod paste;
@@ -1008,6 +1009,7 @@ impl Dialog {
             "manageRules" => Dialog::custom("manageRules", "Conditional Formatting Rules Manager", json!({})),
             "commandSearch" => Dialog::custom("commandSearch", "Search Commands", json!({})),
             "agents" => Dialog::custom("agents", "Agent Control", json!({})),
+            "help" => Dialog::custom("help", "Lusk Tab Help", json!({})),
             "about" => {
                 let mut d = Dialog::custom("about", "About Lusk Tab", json!({}));
                 d.tab = match p("tab").as_str() {

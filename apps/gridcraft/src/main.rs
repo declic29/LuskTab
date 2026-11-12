@@ -383,9 +383,12 @@ fn main() -> eframe::Result<()> {
     gridcraft_ui_egui::i18n::use_system_display();
     let mut app = SheetApp::new(session, services());
     app.watch_desktop_theme();
-    app.start_update_check();
     let control_port = control_port;
     load_prefs(&mut app);
+    // Lusk Tab : la recherche au démarrage se coupe dans Fichier › Mises à jour.
+    if app.ui.check_updates_at_start {
+        app.start_update_check();
+    }
     // The startup workbook is named in the interface language (Classeur1, Feuil1).
     gridcraft_ui_egui::i18n::apply_display_words(app.ui.language);
     // Stamp the startup workbook's author from the persisted user name.

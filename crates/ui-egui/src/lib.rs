@@ -10,9 +10,19 @@
 /// prompt shows both, and an AppImage's menu entry gets the icon.
 #[cfg(not(target_arch = "wasm32"))]
 pub const UPDATE_APP: craft_update::app::App = craft_update::app::App {
+    // Lusk Tab (comme Lusk Texte) : les versions publiées par l'association sur GitHub
+    // (`declic29/LuskTab`), et non celles de GridCraft. Les fichiers s'appellent
+    // `Lusk-Tab-<version>-<système>-<architecture>.<ext>` ; l'identifiant reste `gridcraft`, le nom
+    // du programme (`gridcraft.exe`), que l'outil de mise à jour reconnaît aussi.
+    id: "gridcraft",
+    name: "Lusk Tab",
+    tagline: "Tableur",
+    repo: "declic29/LuskTab",
+    former_ids: &["Lusk-Tab"],
+    former_names: &[],
     icon_png: Some(include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/bzh.lusk.tab.png")),
-    accent: Some([0x1f, 0x9d, 0x55]),
-    ..craft_update::suite::GRIDCRAFT
+    accent: Some([0x7b, 0xc1, 0x43]),
+    developer: "Lusk",
 };
 
 mod agent_messages;
@@ -100,6 +110,8 @@ pub struct UiState {
     pub status_bar: bool,
     /// Motion in the UI: the selection outline glides to a new selection (View ▸ Animations).
     pub animations: bool,
+    /// Lusk Tab : chercher une version plus récente au démarrage (Fichier › Mises à jour).
+    pub check_updates_at_start: bool,
     /// Enable AutoComplete for cell values (File ▸ Options ▸ Editing): typed text is completed
     /// from the one matching entry in the same column.
     pub autocomplete: bool,
@@ -160,6 +172,7 @@ impl Default for UiState {
             formula_bar_lines: formula_bar::MAX_LINES,
             status_bar: true,
             animations: true,
+            check_updates_at_start: true,
             autocomplete: true,
             highlight_active_row: false,
             autosave: false,

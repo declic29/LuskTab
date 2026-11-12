@@ -85,12 +85,15 @@ pub(super) fn automate(app: &mut SheetApp, ui: &mut Ui) {
     if __k.clicked() {
         app.open_dialog("journal", json!({}));
     }
-    let __k = big_button(ui, Icon::Script, "Check for\nUpdates…", "Look for a newer Lusk Tab release", false);
-    control_keytip(app, ui, &__k, "checkForUpdates");
-    if __k.clicked() {
-        app.run_or_alert("app.checkForUpdates", json!({}));
+}
+
+/// Lusk Tab (comme Lusk Texte) : l'onglet Aide, avec l'aide en français et À propos. La recherche
+/// des mises à jour est dans Fichier › Mises à jour.
+pub(super) fn help(app: &mut SheetApp, ui: &mut Ui) {
+    if big_button(ui, Icon::Help, "Help", "Getting started with Lusk Tab: formulas, shortcuts, files, where to get help", false).clicked() {
+        app.open_dialog("help", json!({}));
     }
-    let __k = big_button(ui, Icon::Script, "About\nLusk Tab", "Version, contributors and the AI models that helped", false);
+    let __k = big_button(ui, Icon::Info, "About\nLusk Tab", "Version, publisher and origin of the software", false);
     control_keytip(app, ui, &__k, "about");
     if __k.clicked() {
         app.open_dialog("about", json!({}));

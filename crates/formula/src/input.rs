@@ -34,6 +34,11 @@ const SPANISH: &[(&str, &str)] = &[
 ];
 
 impl FormulaLocale {
+    /// The (English, localized) function names of this language; names that stay English are
+    /// not listed.
+    pub fn aliases(self) -> &'static [(&'static str, &'static str)] {
+        self.table()
+    }
     fn table(self) -> &'static [(&'static str, &'static str)] {
         match self {
             Self::En => &[],

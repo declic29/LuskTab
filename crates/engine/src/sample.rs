@@ -8,10 +8,13 @@ use serde_json::json;
 
 use crate::{DocState, Session};
 
-pub const SAMPLES: &[(&str, &str)] = &[("budget", "Household Budget"), ("sales", "Quarterly Sales Dashboard"), ("grades", "Gradebook")];
+/// Lusk Tab : modèles en français (contenu original), pour une association et ses membres. Les
+/// identifiants restent ceux de GridCraft (`budget`, `sales`, `grades`), que `--sample` et les
+/// tests utilisent.
+pub const SAMPLES: &[(&str, &str)] = &[("budget", "Budget familial"), ("sales", "Comptes de l'association"), ("grades", "Suivi des adhérents")];
 
 pub fn title(name: &str) -> String {
-    SAMPLES.iter().find(|(n, _)| *n == name).map(|(_, t)| t.to_string()).unwrap_or_else(|| "Sample".into())
+    SAMPLES.iter().find(|(n, _)| *n == name).map(|(_, t)| t.to_string()).unwrap_or_else(|| "Modèle".into())
 }
 
 /// Builds a sample by replaying commands (so samples also exercise the command layer).
@@ -21,16 +24,16 @@ pub fn build(name: &str) -> Option<Workbook> {
     if let Some(sh) = wb.sheet_mut(0) {
         sh.name = match name {
             "budget" => "Budget".into(),
-            "sales" => "Sales".into(),
-            "grades" => "Grades".into(),
+            "sales" => "Comptes".into(),
+            "grades" => "Adhérents".into(),
             _ => return None,
         };
     }
     s.add_document(DocState::new(wb, None, title(name), crate::Trust::Local));
     let ok = match name {
         "budget" => budget(&mut s),
-        "sales" => sales(&mut s),
-        "grades" => grades(&mut s),
+        "sales" => accounts(&mut s),
+        "grades" => members(&mut s),
         _ => false,
     };
     if !ok {
@@ -54,56 +57,64 @@ fn run(s: &mut Session, id: &str, p: serde_json::Value) -> bool {
     }
 }
 
-fn sales(s: &mut Session) -> bool {
+/// Montants en euros, avec les séparateurs de la région d'affichage (1 850,00 €).
+const EUROS: &str = "#,##0.00 \"€\"";
+const EUROS_ROUND: &str = "#,##0 \"€\"";
+
+/// Comptes de l'association : les recettes de l'exercice par trimestre, leur total, leur
+/// évolution et leur tendance, deux graphiques et une synthèse.
+fn accounts(s: &mut Session) -> bool {
     let rows = json!([
-        ["Region", "Q1", "Q2", "Q3", "Q4", "Total", "Growth", "Trend"],
-        ["North", 48200, 51340, 56010, 61870],
-        ["South", 39150, 37980, 42400, 45120],
-        ["East", 55300, 58910, 57230, 63480],
-        ["West", 61020, 64400, 70150, 76390],
-        ["Central", 28740, 31260, 33980, 36510],
-        ["Online", 72410, 81630, 95220, 112840],
+        ["Recette", "T1", "T2", "T3", "T4", "Total", "Évolution", "Tendance"],
+        ["Cotisations", 3240, 1180, 860, 2410],
+        ["Subventions", 2500, 1000, 4000, 1500],
+        ["Dons", 640, 520, 380, 1290],
+        ["Manifestations", 1150, 2870, 3420, 980],
+        ["Buvette et ventes", 410, 1260, 1880, 350],
+        ["Partenariats", 800, 800, 1200, 1200],
     ]);
     let mut ok = run(s, "range.setValues", json!({"range": "B4", "values": rows}));
-    ok &= run(s, "range.setValues", json!({"range": "B2", "values": [["Quarterly Sales Dashboard"]]}));
+    ok &= run(s, "range.setValues", json!({"range": "B2", "values": [["Comptes de l'association — exercice 2026"]]}));
     ok &= run(s, "home.cellStyle", json!({"range": "B2", "name": "Title"}));
-    ok &= run(s, "range.setValues", json!({"range": "B3", "values": [["Fiscal year 2026 · all figures in USD"]]}));
+    ok &= run(s, "range.setValues", json!({"range": "B3", "values": [["Recettes par trimestre · montants en euros"]]}));
     ok &= run(s, "home.cellStyle", json!({"range": "B3", "name": "Explanatory Text"}));
     for r in 5..=10 {
         ok &= run(s, "cell.set", json!({"cell": format!("G{r}"), "input": format!("=SUM(C{r}:F{r})")}));
         ok &= run(s, "cell.set", json!({"cell": format!("H{r}"), "input": format!("=F{r}/C{r}-1")}));
         ok &= run(s, "insert.sparkline", json!({"range": format!("C{r}:F{r}"), "location": format!("I{r}"), "type": "line", "markers": true}));
     }
-    ok &= run(s, "insert.table", json!({"range": "B4:I10", "style": "TableStyleMedium2", "name": "Sales"}));
-    ok &= run(s, "table.totalRow", json!({"table": "Sales", "on": true}));
-    for col in ["Q1", "Q2", "Q3", "Q4", "Total"] {
-        ok &= run(s, "table.totalFunction", json!({"table": "Sales", "column": col, "function": "sum"}));
+    ok &= run(s, "insert.table", json!({"range": "B4:I10", "style": "TableStyleMedium7", "name": "Recettes"}));
+    ok &= run(s, "table.totalRow", json!({"table": "Recettes", "on": true}));
+    for col in ["T1", "T2", "T3", "T4", "Total"] {
+        ok &= run(s, "table.totalFunction", json!({"table": "Recettes", "column": col, "function": "sum"}));
     }
-    ok &= run(s, "table.totalFunction", json!({"table": "Sales", "column": "Growth", "function": "average"}));
-    ok &= run(s, "table.totalFunction", json!({"table": "Sales", "column": "Trend", "function": "none"}));
-    ok &= run(s, "home.numberFormat", json!({"range": "C5:G11", "code": "\"$\"#,##0"}));
+    ok &= run(s, "table.totalFunction", json!({"table": "Recettes", "column": "Évolution", "function": "average"}));
+    ok &= run(s, "table.totalFunction", json!({"table": "Recettes", "column": "Tendance", "function": "none"}));
+    ok &= run(s, "home.numberFormat", json!({"range": "C5:G11", "code": EUROS_ROUND}));
     ok &= run(s, "home.numberFormat", json!({"range": "H5:H11", "code": "0.0%"}));
-    ok &= run(s, "home.conditionalFormat", json!({"range": "G5:G10", "rule": {"type": "dataBar", "color": "#5B9BD5"}}));
+    ok &= run(s, "home.conditionalFormat", json!({"range": "G5:G10", "rule": {"type": "dataBar", "color": "#7BC143"}}));
     ok &= run(s, "home.conditionalFormat", json!({"range": "H5:H10", "rule": {"type": "iconSet", "set": "3Arrows"}}));
     ok &= run(s, "home.columnWidth", json!({"cols": "A:A", "width": 20}));
-    ok &= run(s, "home.columnWidth", json!({"cols": "B:B", "width": 132}));
+    ok &= run(s, "home.columnWidth", json!({"cols": "B:B", "width": 150}));
     ok &= run(s, "home.columnWidth", json!({"cols": "C:G", "width": 84}));
-    ok &= run(s, "home.columnWidth", json!({"cols": "H:I", "width": 76}));
+    ok &= run(s, "home.columnWidth", json!({"cols": "H:I", "width": 80}));
     ok &= run(s, "selection.set", json!({"range": "B4:F10"}));
-    ok &= run(s, "insert.chart", json!({"type": "column", "title": "Revenue by Region", "at": "K3", "width": 460, "height": 270}));
-    ok &= run(s, "selection.set", json!({"range": "B4:B10"}));
-    // Pie of totals.
-    ok &=
-        run(s, "insert.chart", json!({"range": "B4:B10", "type": "pie", "title": "Share of Annual Total", "at": "K19", "width": 460, "height": 260}));
+    ok &= run(s, "insert.chart", json!({"type": "column", "title": "Recettes par trimestre", "at": "K3", "width": 460, "height": 270}));
+    // Les totaux de l'année en secteurs.
+    ok &= run(
+        s,
+        "insert.chart",
+        json!({"range": "B4:B10", "type": "pie", "title": "Répartition des recettes", "at": "K19", "width": 460, "height": 260}),
+    );
     if let Ok(d) = s.doc_mut() {
         let wb = Arc::make_mut(&mut d.wb);
         if let Some(sh) = wb.sheet_mut(0)
             && let Some(c) = sh.charts.last_mut()
         {
             c.series = vec![gridcraft_model::Series {
-                name: Some("Sales!$G$4".into()),
-                categories: Some("Sales!$B$5:$B$10".into()),
-                values: "Sales!$G$5:$G$10".into(),
+                name: Some("Comptes!$G$4".into()),
+                categories: Some("Comptes!$B$5:$B$10".into()),
+                values: "Comptes!$G$5:$G$10".into(),
                 bubble_sizes: None,
                 color: None,
                 secondary: false,
@@ -114,36 +125,42 @@ fn sales(s: &mut Session) -> bool {
             }];
         }
     }
-    ok &= run(s, "range.setValues", json!({"range": "B14", "values": [["Best region"], ["Average quarter"], ["Online share"], ["Year-over-year"]]}));
-    ok &= run(s, "cell.set", json!({"cell": "C14", "input": "=INDEX(Sales[Region],MATCH(MAX(Sales[Total]),Sales[Total],0))"}));
+    ok &= run(
+        s,
+        "range.setValues",
+        json!({"range": "B14", "values": [["Plus forte recette"], ["Moyenne par trimestre"], ["Part des cotisations"], ["Évolution T1 → T4"]]}),
+    );
+    ok &= run(s, "cell.set", json!({"cell": "C14", "input": "=INDEX(Recettes[Recette],MATCH(MAX(Recettes[Total]),Recettes[Total],0))"}));
     ok &= run(s, "cell.set", json!({"cell": "C15", "input": "=AVERAGE(C5:F10)"}));
-    ok &= run(s, "cell.set", json!({"cell": "C16", "input": "=G10/SUM(G5:G10)"}));
+    ok &= run(s, "cell.set", json!({"cell": "C16", "input": "=G5/SUM(G5:G10)"}));
     ok &= run(s, "cell.set", json!({"cell": "C17", "input": "=SUM(F5:F10)/SUM(C5:C10)-1"}));
-    ok &= run(s, "home.numberFormat", json!({"range": "C15", "code": "\"$\"#,##0"}));
+    ok &= run(s, "home.numberFormat", json!({"range": "C15", "code": EUROS_ROUND}));
     ok &= run(s, "home.numberFormat", json!({"range": "C16:C17", "code": "0.0%"}));
     ok &= run(s, "home.bold", json!({"range": "B14:B17", "on": true}));
     ok &= run(s, "home.borders", json!({"range": "B14:C17", "preset": "outside"}));
-    ok &= run(s, "home.fillColor", json!({"range": "B14:C17", "color": "#F2F7FC"}));
-    ok &= run(s, "review.newNote", json!({"cell": "H4", "text": "Q4 vs Q1 growth for each region."}));
+    ok &= run(s, "home.fillColor", json!({"range": "B14:C17", "color": "#F1F8EA"}));
+    ok &= run(s, "review.newNote", json!({"cell": "H4", "text": "Évolution entre le T1 et le T4, pour chaque recette."}));
     ok &= run(s, "selection.set", json!({"cell": "B2"}));
     ok
 }
 
+/// Budget familial : le prévu et le réel du mois par poste, l'écart, la part utilisée et un
+/// graphique.
 fn budget(s: &mut Session) -> bool {
     let rows = json!([
-        ["Category", "Budget", "Actual", "Difference", "% Used"],
-        ["Rent", 1850, 1850],
-        ["Groceries", 620, 684.35],
-        ["Utilities", 240, 212.8],
-        ["Transport", 180, 203.5],
-        ["Internet & phone", 95, 95],
-        ["Insurance", 210, 210],
-        ["Dining out", 200, 265.9],
-        ["Entertainment", 120, 88.25],
-        ["Savings", 600, 600],
-        ["Art supplies", 150, 172.4],
+        ["Poste", "Prévu", "Réel", "Écart", "% utilisé"],
+        ["Loyer", 650, 650],
+        ["Courses", 420, 463.8],
+        ["Électricité et chauffage", 120, 134.2],
+        ["Transports", 90, 76.5],
+        ["Téléphone et Internet", 45, 45],
+        ["Assurances", 85, 85],
+        ["Santé et mutuelle", 60, 48.3],
+        ["Loisirs et sorties", 100, 127.9],
+        ["Épargne", 150, 150],
+        ["Cotisations et dons", 30, 30],
     ]);
-    let mut ok = run(s, "range.setValues", json!({"range": "B2", "values": [["Monthly Budget — October 2026"]]}));
+    let mut ok = run(s, "range.setValues", json!({"range": "B2", "values": [["Budget du mois — novembre 2026"]]}));
     ok &= run(s, "home.cellStyle", json!({"range": "B2", "name": "Title"}));
     ok &= run(s, "range.setValues", json!({"range": "B4", "values": rows}));
     for r in 5..=14 {
@@ -157,7 +174,7 @@ fn budget(s: &mut Session) -> bool {
     ok &= run(s, "cell.set", json!({"cell": "F15", "input": "=D15/C15"}));
     ok &= run(s, "home.cellStyle", json!({"range": "B4:F4", "name": "Heading 3"}));
     ok &= run(s, "home.cellStyle", json!({"range": "B15:F15", "name": "Total"}));
-    ok &= run(s, "home.numberFormat", json!({"range": "C5:E15", "format": "Accounting"}));
+    ok &= run(s, "home.numberFormat", json!({"range": "C5:E15", "code": EUROS}));
     ok &= run(s, "home.numberFormat", json!({"range": "F5:F15", "code": "0%"}));
     ok &= run(
         s,
@@ -165,45 +182,63 @@ fn budget(s: &mut Session) -> bool {
         json!({"range": "E5:E14", "rule": {"type": "cellIs", "operator": "less", "value": 0, "preset": "lightRedFillDarkRedText"}}),
     );
     ok &= run(s, "home.conditionalFormat", json!({"range": "F5:F14", "rule": {"type": "colorScale", "colors": ["#63BE7B", "#FFEB84", "#F8696B"]}}));
-    ok &= run(s, "home.columnWidth", json!({"cols": "B:B", "width": 130}));
-    ok &= run(s, "home.columnWidth", json!({"cols": "C:E", "width": 90}));
+    ok &= run(s, "home.columnWidth", json!({"cols": "B:B", "width": 170}));
+    ok &= run(s, "home.columnWidth", json!({"cols": "C:E", "width": 92}));
     ok &= run(s, "selection.set", json!({"range": "B4:D14"}));
-    ok &= run(s, "insert.chart", json!({"type": "bar", "title": "Budget vs Actual", "at": "H3", "width": 440, "height": 300}));
+    ok &= run(s, "insert.chart", json!({"type": "bar", "title": "Prévu et réel", "at": "H3", "width": 440, "height": 300}));
     ok &= run(s, "view.freezePanes", json!({"cell": "A5"}));
     ok &= run(s, "selection.set", json!({"cell": "B2"}));
     ok
 }
 
-fn grades(s: &mut Session) -> bool {
+/// Suivi des adhérents : la cotisation de chaque adhérent, ce qu'il a réglé, le reste dû et
+/// s'il est à jour ou à relancer. Noms inventés.
+fn members(s: &mut Session) -> bool {
     let rows = json!([
-        ["Student", "Essay", "Midterm", "Project", "Final", "Average", "Grade"],
-        ["Amara Okafor", 92, 88, 95, 91],
-        ["Bruno Silva", 78, 82, 74, 80],
-        ["Chen Wei", 85, 91, 89, 94],
-        ["Dana Kowalski", 67, 72, 80, 70],
-        ["Elif Yılmaz", 98, 95, 97, 99],
-        ["Farid Haddad", 74, 69, 71, 77],
-        ["Grace Mensah", 88, 84, 90, 86],
-        ["Hiro Tanaka", 59, 64, 70, 62],
+        ["Adhérent", "Commune", "Adhésion", "Cotisation", "Réglé", "Reste dû", "Statut"],
+        ["Annaïg Le Floc'h", "Quimper", "1/12/2026", 25, 25],
+        ["Yannick Kerdraon", "Brest", "2/3/2026", 25, 10],
+        ["Maëlle Tanguy", "Morlaix", "2/20/2026", 15, 15],
+        ["Erwan Le Gourrierec", "Concarneau", "3/8/2026", 25, 0],
+        ["Soizic Pennec", "Quimperlé", "4/14/2026", 25, 25],
+        ["Loïc Morvezen", "Landerneau", "5/2/2026", 40, 40],
+        ["Gwenola Riou", "Douarnenez", "6/21/2026", 15, 0],
+        ["Tugdual Cariou", "Carhaix-Plouguer", "9/9/2026", 25, 25],
     ]);
-    let mut ok = run(s, "range.setValues", json!({"range": "A1", "values": rows}));
-    for r in 2..=9 {
-        ok &= run(s, "cell.set", json!({"cell": format!("F{r}"), "input": format!("=AVERAGE(B{r}:E{r})")}));
-        ok &= run(
-            s,
-            "cell.set",
-            json!({"cell": format!("G{r}"), "input": format!("=IFS(F{r}>=90,\"A\",F{r}>=80,\"B\",F{r}>=70,\"C\",F{r}>=60,\"D\",TRUE,\"F\")")}),
-        );
+    let mut ok = true;
+    // Les dates en texte de saisie, pour qu'elles deviennent des dates.
+    for (i, row) in rows.as_array().into_iter().flatten().enumerate() {
+        let r = i + 1;
+        for (c, v) in row.as_array().into_iter().flatten().enumerate() {
+            let col = ["A", "B", "C", "D", "E", "F", "G"][c];
+            let input = match v {
+                serde_json::Value::String(t) => t.clone(),
+                other => other.to_string(),
+            };
+            ok &= run(s, "cell.set", json!({"cell": format!("{col}{r}"), "input": input}));
+        }
     }
-    ok &= run(s, "home.numberFormat", json!({"range": "F2:F9", "code": "0.0"}));
-    ok &= run(s, "insert.table", json!({"range": "A1:G9", "style": "TableStyleLight9", "name": "Grades"}));
-    ok &= run(s, "home.columnWidth", json!({"cols": "A:A", "width": 120}));
+    for r in 2..=9 {
+        ok &= run(s, "cell.set", json!({"cell": format!("F{r}"), "input": format!("=D{r}-E{r}")}));
+        ok &= run(s, "cell.set", json!({"cell": format!("G{r}"), "input": format!("=IF(F{r}<=0,\"À jour\",\"À relancer\")")}));
+    }
+    ok &= run(s, "home.numberFormat", json!({"range": "C2:C9", "code": "dd/mm/yyyy"}));
+    ok &= run(s, "home.numberFormat", json!({"range": "D2:F9", "code": EUROS}));
+    ok &= run(s, "insert.table", json!({"range": "A1:G9", "style": "TableStyleLight11", "name": "Adherents"}));
+    ok &= run(s, "home.columnWidth", json!({"cols": "A:A", "width": 150}));
+    ok &= run(s, "home.columnWidth", json!({"cols": "B:B", "width": 120}));
+    ok &= run(s, "home.columnWidth", json!({"cols": "C:G", "width": 90}));
     ok &= run(
         s,
         "home.conditionalFormat",
-        json!({"range": "G2:G9", "rule": {"type": "cellIs", "operator": "equal", "value": "A", "preset": "greenFillDarkGreenText"}}),
+        json!({"range": "G2:G9", "rule": {"type": "cellIs", "operator": "equal", "value": "À relancer", "preset": "lightRedFillDarkRedText"}}),
     );
-    ok &= run(s, "home.conditionalFormat", json!({"range": "F2:F9", "rule": {"type": "dataBar", "color": "#63BE7B"}}));
+    ok &= run(
+        s,
+        "home.conditionalFormat",
+        json!({"range": "G2:G9", "rule": {"type": "cellIs", "operator": "equal", "value": "À jour", "preset": "greenFillDarkGreenText"}}),
+    );
+    ok &= run(s, "home.conditionalFormat", json!({"range": "E2:E9", "rule": {"type": "dataBar", "color": "#7BC143"}}));
     ok
 }
 

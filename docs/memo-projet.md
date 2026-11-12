@@ -141,6 +141,22 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   pour les copies CSV, page web et PDF. Aucune connexion à un compte : l'application du service
   envoie le fichier en ligne. Code : `crates/ui-egui/src/cloud.rs`, `backstage.rs`
   (`cloud_buttons`), service `pick_save_in`.
+- 12 novembre 2026, **menu Aide, page Mises à jour, modèles et palette en français** :
+  - onglet **Aide** du ruban (après Automatiser) avec « Aide » (fenêtre d'aide en français :
+    formules, raccourcis, fichiers, site, contact, signalement ; `dialogs/help.rs`) et « À propos
+    de Lusk Tab », retirés d'Automatiser ;
+  - **Fichier › Mises à jour**, en bas à gauche sous Options comme dans Lusk Texte : version
+    installée, bouton « Rechercher des mises à jour », case « au démarrage » (enregistrée dans les
+    préférences). Les mises à jour viennent maintenant de `declic29/LuskTab`
+    (`UPDATE_APP` dans `lib.rs`, page dans `updates_ui.rs`) ;
+  - **modèles de Fichier › Nouveau** en français : Budget familial, Comptes de l'association,
+    Suivi des adhérents (`crates/engine/src/sample.rs`, données inventées) ;
+  - **palette « Rechercher des commandes »** (loupe) en français : noms, menus et touches (Maj,
+    Entrée…), recherche sans accents en français comme en anglais (`dialogs/command_search.rs`),
+    190 libellés ajoutés au catalogue ;
+  - vérification des fonctions : un test tape chacune des fonctions du moteur sous son nom
+    français et contrôle qu'elle est calculée (jamais #NOM?) et que chaque nom français mène à
+    la bonne fonction (`crates/engine/tests/it/french_functions.rs`).
 
 ## À faire (dans l'ordre du cahier des charges)
 
@@ -148,9 +164,8 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
    `ArtCraft\GridCraft`, éditeur), macOS (`package.sh`, nom de l'app, DMG : le fond
    `packaging/macos/dmg/background.svg` pointait vers l'ancienne icône SVG, à refaire),
    `sign.ps1`, `flatpak-oci.sh`.
-2. Accueil avec le renard, page Mises à jour reliée à `declic29/LuskTab`, OneDrive et Google Drive
-   aussi dans Fichier › Ouvrir.
-3. Aide en français et page Confidentialité (après un audit réseau).
+2. Accueil avec le renard, OneDrive et Google Drive aussi dans Fichier › Ouvrir.
+3. Page Confidentialité (après un audit réseau).
 4. Installateurs en français et workflow « Publication » (repris de Lusk Texte).
 5. Version 1.0.0.
 

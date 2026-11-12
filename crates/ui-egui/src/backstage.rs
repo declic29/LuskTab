@@ -43,10 +43,13 @@ pub enum Page {
     Export,
     Options,
     Account,
+    /// Lusk Tab (comme Lusk Texte) : la version installée et la recherche des mises à jour.
+    Updates,
 }
 
 impl Page {
-    pub const ALL: [Page; 9] = [Page::Home, Page::New, Page::Open, Page::Info, Page::SaveAs, Page::Print, Page::Export, Page::Options, Page::Account];
+    pub const ALL: [Page; 10] =
+        [Page::Home, Page::New, Page::Open, Page::Info, Page::SaveAs, Page::Print, Page::Export, Page::Options, Page::Account, Page::Updates];
 
     /// The id `ui.backstage` and `ui.dialog {"name": "backstage", "page": …}` take.
     pub fn id(self) -> &'static str {
@@ -60,6 +63,7 @@ impl Page {
             Page::Export => "export",
             Page::Options => "options",
             Page::Account => "account",
+            Page::Updates => "updates",
         }
     }
 
@@ -80,6 +84,7 @@ impl Page {
             Page::Export => "Export",
             Page::Options => "Options",
             Page::Account => "Account",
+            Page::Updates => "Updates",
         }
     }
 
@@ -94,6 +99,7 @@ impl Page {
             Page::Export => Icon::Share,
             Page::Options => Icon::Settings,
             Page::Account => Icon::Info,
+            Page::Updates => Icon::Cloud,
         }
     }
 }
@@ -208,9 +214,10 @@ pub fn show(app: &mut SheetApp, ui: &mut Ui) {
                     out.close = true;
                 }
             }
-            // Bottom up: Account sits just above Options, as in Excel.
+            // Bottom up: Account sits just above Options, as in Excel; Lusk Tab puts Updates under
+            // Options, as Lusk Texte does.
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-                for page in [Page::Options, Page::Account] {
+                for page in [Page::Updates, Page::Options, Page::Account] {
                     if nav_item(ui, page.icon(), lang.tr(page.label()), bs.page == page, nav_text, nav_sel).clicked() {
                         out.page = Some(page);
                     }
@@ -233,6 +240,10 @@ pub fn show(app: &mut SheetApp, ui: &mut Ui) {
                     Page::Export => export(app, ui, &mut out),
                     Page::Options => options(app, ui),
                     Page::Account => account(app, ui),
+                    #[cfg(not(target_arch = "wasm32"))]
+                    Page::Updates => crate::updates_ui::page(app, ui),
+                    #[cfg(target_arch = "wasm32")]
+                    Page::Updates => dim(ui, "Dans le navigateur, Lusk Tab est toujours à jour : la page charge la dernière version."),
                 }
             });
         });
