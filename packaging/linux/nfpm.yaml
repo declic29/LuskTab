@@ -3,7 +3,7 @@
 # exports VERSION and NFPM_ARCH.
 #
 #   nfpm package -f packaging/linux/nfpm.yaml -p deb -t dist/release/
-name: gridcraft
+name: lusk-tab
 arch: ${NFPM_ARCH}
 platform: linux
 version: ${VERSION}

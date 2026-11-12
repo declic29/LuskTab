@@ -229,4 +229,20 @@ mod tests {
             h.render().unwrap().save(dir.join(format!("maj-{name}.png"))).unwrap();
         }
     }
+
+    /// Lusk Tab : la mise à jour reconnaît les fichiers que publie le workflow « Publication »
+    /// (`Lusk-Tab-<version>-…`), mais pas leurs copies sans numéro de version (les liens
+    /// « dernière version » du README) ni l'archive de l'outil en ligne de commande.
+    #[test]
+    fn release_files_named_lusk_tab_are_found() {
+        use craft_update::platform::parse_asset_name;
+        let stems: Vec<&str> = crate::UPDATE_APP.stems().collect();
+        let a = parse_asset_name("Lusk-Tab-1.0.0-windows-x64.msi", &stems).unwrap();
+        assert_eq!((a.version.to_string().as_str(), a.token.as_str()), ("1.0.0", "windows-x64"));
+        assert!(parse_asset_name("Lusk-Tab-1.0.0-macos-universal.dmg", &stems).is_some());
+        assert!(parse_asset_name("Lusk-Tab-1.0.0-linux-x86_64.AppImage", &stems).is_some());
+        assert!(parse_asset_name("Lusk-Tab-1.0.0-linux-x86_64.deb", &stems).is_some());
+        assert!(parse_asset_name("Lusk-Tab-Windows.msi", &stems).is_none());
+        assert!(parse_asset_name("Lusk-Tab-cli-1.0.0-macos-universal.zip", &stems).is_none());
+    }
 }

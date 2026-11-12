@@ -29,8 +29,7 @@ jamais envoyés nulle part.
 - **Un tableur complet** : des centaines de fonctions, mise en forme et mise en forme
   conditionnelle, tri et filtres, graphiques, tableaux croisés dynamiques, valeur cible, solveur et
   scénarios, macros.
-- **En français d'abord**, avec les noms des fonctions en français (SOMME, SI, RECHERCHEV…)
-  prévus pour la version 1.0.
+- **En français d'abord**, avec les noms des fonctions en français (SOMME, SI, RECHERCHEV…).
 
 ## Télécharger et installer
 
@@ -43,10 +42,19 @@ Téléchargez la dernière version pour votre système :
 | Linux (toutes distributions) | [**Lusk-Tab-Linux.AppImage**](https://github.com/declic29/LuskTab/releases/latest/download/Lusk-Tab-Linux.AppImage) |
 | Linux (Debian, Ubuntu, Mint) | [**Lusk-Tab-Linux.deb**](https://github.com/declic29/LuskTab/releases/latest/download/Lusk-Tab-Linux.deb) |
 
-Les autres formats et les versions précédentes sont sur la page
+Les autres formats (version portable pour Windows sans installation, `.rpm` pour Fedora et
+openSUSE, `.tar.gz`) et les versions précédentes sont sur la page
 [Releases](https://github.com/declic29/LuskTab/releases).
 
-**Windows.** Lancez l'installeur `.msi` et suivez les étapes.
+`SHA256SUMS.txt` donne l'empreinte de chaque fichier, pour vérifier un téléchargement.
+
+Une fois Lusk Tab installé, **Fichier › Mises à jour** cherche et installe les nouvelles
+versions.
+
+**Windows.** L'installeur, en français, propose « Pour moi seulement » (pour votre compte, sans
+droits d'administrateur, dans `%LOCALAPPDATA%\Programs\Lusk\Lusk Tab`) ou « Pour tous les
+utilisateurs de cet ordinateur » (dans `C:\Program Files\Lusk\Lusk Tab`, avec l'accord d'un
+administrateur), puis un raccourci sur le Bureau (case cochée au départ).
 
 **macOS.** Ouvrez le `.dmg` et glissez Lusk Tab dans Applications. La première fois, faites un
 clic droit sur l'application puis **Ouvrir**.

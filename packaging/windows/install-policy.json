@@ -1,13 +1,21 @@
 {
   "id": "gridcraft",
-  "name": "GridCraft",
-  "upgradeCode": "5511327B-F305-41BE-92D0-EB84944E7C4D",
+  "name": "LuskTab",
+  "folder": "Lusk Tab",
+  "suite": "Lusk",
+  "upgradeCode": "59E39F09-9F0F-494C-96BD-06E3C9EBCCFE",
   "sources": [
-    "gridcraft.wxs"
+    "gridcraft.wxs",
+    "lusk-welcome.wxs"
   ],
   "icon": "assets/app-icon/gridcraft.ico",
-  "localization": [],
-  "extensions": [],
+  "localization": [
+    "lusk-fr.wxl"
+  ],
+  "extensions": [
+    "UI",
+    "Util"
+  ],
   "payloads": [
     "gridcraft-cli.exe",
     "gridcraft.exe"
@@ -21,128 +29,206 @@
     ],
     [
       "-1",
-      "Software\\Classes\\GridCraft.Workbook",
-      "",
-      "GridCraft Workbook"
+      "Software\\RegisteredApplications",
+      "LuskTab",
+      "Software\\LuskTab\\Capabilities"
     ],
     [
       "-1",
-      "Software\\Classes\\GridCraft.Workbook\\DefaultIcon",
-      "",
+      "Software\\LuskTab\\Capabilities",
+      "ApplicationName",
+      "Lusk Tab"
+    ],
+    [
+      "-1",
+      "Software\\LuskTab\\Capabilities",
+      "ApplicationDescription",
+      "Le tableur libre de l'association Lusk ; ouvrez et enregistrez des classeurs Excel et des fichiers CSV."
+    ],
+    [
+      "-1",
+      "Software\\LuskTab\\Capabilities",
+      "ApplicationIcon",
       "\"[#GridcraftExe]\",0"
     ],
     [
       "-1",
-      "Software\\Classes\\GridCraft.Workbook\\shell\\open\\command",
+      "Software\\Classes\\Applications\\gridcraft.exe",
+      "FriendlyAppName",
+      "Lusk Tab"
+    ],
+    [
+      "-1",
+      "Software\\Classes\\Applications\\gridcraft.exe\\shell\\open\\command",
       "",
       "\"[#GridcraftExe]\" \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\GridCraft.TextData",
-      "",
-      "GridCraft Text Data"
-    ],
-    [
-      "-1",
-      "Software\\Classes\\GridCraft.TextData\\DefaultIcon",
-      "",
-      "\"[#GridcraftExe]\",0"
-    ],
-    [
-      "-1",
-      "Software\\Classes\\GridCraft.TextData\\shell\\open\\command",
+      "Software\\Classes\\LuskTab.Workbook\\shell\\open\\command",
       "",
       "\"[#GridcraftExe]\" \"%1\""
     ],
     [
       "-1",
       "Software\\Classes\\.xlsx\\OpenWithProgids",
-      "GridCraft.Workbook",
-      "GridCraft.Workbook"
+      "LuskTab.Workbook",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\Classes\\Applications\\gridcraft.exe\\SupportedTypes",
+      ".xlsx",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\LuskTab\\Capabilities\\FileAssociations",
+      ".xlsx",
+      "LuskTab.Workbook"
+    ],
+    [
+      "-1",
+      "Software\\Classes\\LuskTab.WorkbookMacroEnabled\\shell\\open\\command",
+      "",
+      "\"[#GridcraftExe]\" \"%1\""
     ],
     [
       "-1",
       "Software\\Classes\\.xlsm\\OpenWithProgids",
-      "GridCraft.Workbook",
-      "GridCraft.Workbook"
+      "LuskTab.WorkbookMacroEnabled",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\Classes\\Applications\\gridcraft.exe\\SupportedTypes",
+      ".xlsm",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\LuskTab\\Capabilities\\FileAssociations",
+      ".xlsm",
+      "LuskTab.WorkbookMacroEnabled"
+    ],
+    [
+      "-1",
+      "Software\\Classes\\LuskTab.LegacyWorkbook\\shell\\open\\command",
+      "",
+      "\"[#GridcraftExe]\" \"%1\""
+    ],
+    [
+      "-1",
+      "Software\\Classes\\.xls\\OpenWithProgids",
+      "LuskTab.LegacyWorkbook",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\Classes\\Applications\\gridcraft.exe\\SupportedTypes",
+      ".xls",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\LuskTab\\Capabilities\\FileAssociations",
+      ".xls",
+      "LuskTab.LegacyWorkbook"
+    ],
+    [
+      "-1",
+      "Software\\Classes\\LuskTab.BinaryWorkbook\\shell\\open\\command",
+      "",
+      "\"[#GridcraftExe]\" \"%1\""
     ],
     [
       "-1",
       "Software\\Classes\\.xlsb\\OpenWithProgids",
-      "GridCraft.Workbook",
-      "GridCraft.Workbook"
+      "LuskTab.BinaryWorkbook",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\Classes\\Applications\\gridcraft.exe\\SupportedTypes",
+      ".xlsb",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\Classes\\LuskTab.OpenDocumentSpreadsheet\\shell\\open\\command",
+      "",
+      "\"[#GridcraftExe]\" \"%1\""
     ],
     [
       "-1",
       "Software\\Classes\\.ods\\OpenWithProgids",
-      "GridCraft.Workbook",
-      "GridCraft.Workbook"
+      "LuskTab.OpenDocumentSpreadsheet",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\Classes\\Applications\\gridcraft.exe\\SupportedTypes",
+      ".ods",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\LuskTab\\Capabilities\\FileAssociations",
+      ".ods",
+      "LuskTab.OpenDocumentSpreadsheet"
+    ],
+    [
+      "-1",
+      "Software\\Classes\\LuskTab.Csv\\shell\\open\\command",
+      "",
+      "\"[#GridcraftExe]\" \"%1\""
     ],
     [
       "-1",
       "Software\\Classes\\.csv\\OpenWithProgids",
-      "GridCraft.TextData",
-      "GridCraft.TextData"
+      "LuskTab.Csv",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\Classes\\Applications\\gridcraft.exe\\SupportedTypes",
+      ".csv",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\LuskTab\\Capabilities\\FileAssociations",
+      ".csv",
+      "LuskTab.Csv"
+    ],
+    [
+      "-1",
+      "Software\\Classes\\LuskTab.Tsv\\shell\\open\\command",
+      "",
+      "\"[#GridcraftExe]\" \"%1\""
     ],
     [
       "-1",
       "Software\\Classes\\.tsv\\OpenWithProgids",
-      "GridCraft.TextData",
-      "GridCraft.TextData"
+      "LuskTab.Tsv",
+      ""
     ],
     [
       "-1",
-      "Software\\GridCraft\\Capabilities",
-      "ApplicationName",
-      "GridCraft"
-    ],
-    [
-      "-1",
-      "Software\\GridCraft\\Capabilities",
-      "ApplicationDescription",
-      "Open-source spreadsheet for .xlsx, CSV and TSV files"
-    ],
-    [
-      "-1",
-      "Software\\GridCraft\\Capabilities\\FileAssociations",
-      ".xlsx",
-      "GridCraft.Workbook"
-    ],
-    [
-      "-1",
-      "Software\\GridCraft\\Capabilities\\FileAssociations",
-      ".xlsm",
-      "GridCraft.Workbook"
-    ],
-    [
-      "-1",
-      "Software\\GridCraft\\Capabilities\\FileAssociations",
-      ".csv",
-      "GridCraft.TextData"
-    ],
-    [
-      "-1",
-      "Software\\GridCraft\\Capabilities\\FileAssociations",
+      "Software\\Classes\\Applications\\gridcraft.exe\\SupportedTypes",
       ".tsv",
-      "GridCraft.TextData"
+      ""
     ],
     [
       "-1",
-      "Software\\RegisteredApplications",
-      "GridCraft",
-      "Software\\GridCraft\\Capabilities"
+      "Software\\LuskTab\\Capabilities\\FileAssociations",
+      ".tsv",
+      "LuskTab.Tsv"
     ],
     [
       "-1",
-      "Software\\GridCraft\\Installer",
+      "Software\\LuskTab",
       "DesktopShortcut",
-      "[DESKTOPSHORTCUT]"
-    ],
-    [
-      "-1",
-      "Software\\GridCraft\\Installer",
-      "DesktopShortcutComponent",
       "#1"
     ]
   ],

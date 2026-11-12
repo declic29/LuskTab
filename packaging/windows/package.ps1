@@ -1,18 +1,23 @@
 <#
 .SYNOPSIS
-  Build, sign and package GridCraft for Windows.
+  Build, sign and package Lusk Tab for Windows.
 
 .DESCRIPTION
   Produces, in $env:DIST (default: dist/release):
-    gridcraft-<version>-windows-<arch>.msi            per-machine installer (WiX v5)
-    gridcraft-<version>-windows-<arch>-portable.zip   gridcraft.exe + gridcraft-cli.exe
+    Lusk-Tab-<version>-windows-<arch>.msi           installer (WiX v5), one dual-scope package: for the
+                                                      current user by default, no admin rights (#39);
+                                                      "Everyone on this computer" installs per machine
+    Lusk-Tab-<version>-windows-<arch>-portable.zip  gridcraft.exe + gridcraft-cli.exe
 
   The binaries link the C runtime statically (+crt-static), so neither the MSI nor the portable
   zip needs the Visual C++ redistributable. Signing is delegated to sign.ps1 (skipped with a
   warning when no signing secrets are set).
 
   Needs: Rust (MSVC toolchain + the target), the Windows SDK (rc.exe, signtool.exe),
-  and WiX v5: dotnet tool install --global wix --version 5.0.2
+  and WiX v5 with its UI and Util extensions (installer dialogs, "Lancer Lusk Tab" on finish):
+    dotnet tool install --global wix --version 5.0.2
+    wix extension add -g WixToolset.UI.wixext/5.0.2
+    wix extension add -g WixToolset.Util.wixext/5.0.2
 
 .EXAMPLE
   pwsh packaging/windows/package.ps1 -Arch x64
@@ -53,7 +58,7 @@ New-Item -ItemType Directory -Force -Path $Dist | Out-Null
 if (-not $env:GRIDCRAFT_BUILD_SHA) { $env:GRIDCRAFT_BUILD_SHA = (git -C $Root rev-parse HEAD 2>$null) }
 if (-not $env:GRIDCRAFT_BUILD_DATE) { $env:GRIDCRAFT_BUILD_DATE = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd') }
 
-Write-Output "GridCraft $Version for Windows $Arch ($Target)"
+Write-Output "Lusk Tab $Version for Windows $Arch ($Target)"
 
 if (-not $SkipBuild) {
   # Static CRT: no VC++ redistributable needed. Scoped to the target so host build scripts and
@@ -90,13 +95,16 @@ Copy-Item (Join-Path $Bin 'gridcraft.exe'), (Join-Path $Bin 'gridcraft-cli.exe')
 
 & (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage 'gridcraft.exe') (Join-Path $Stage 'gridcraft-cli.exe')
 
+# Required notices ship in every MSI, independently of optional craft-fonts.
+$AppNotices = Join-Path $Stage 'app-notices'
+New-Item -ItemType Directory -Force -Path $AppNotices | Out-Null
+Copy-Item -LiteralPath (Join-Path $Root 'NOTICE'), (Join-Path $Root 'ATTRIBUTION.md') -Destination $AppNotices
+
 # ---- font notices for the MSI ------------------------------------------------------------------
 # The portable ZIP already carries these notices; stage the complete files before MSI creation too.
 $Docs = Join-Path $Stage 'font-licences'
 New-Item -ItemType Directory -Force -Path $Docs | Out-Null
-# Bundled dependency font notices are required even without optional craft-fonts.
-Copy-Item -LiteralPath (Join-Path $Root 'NOTICE'), (Join-Path $Root 'ATTRIBUTION.md') -Destination $Docs
-$HasCraftFontLicences = 1
+$HasCraftFontLicences = 0
 if ($env:CRAFT_FONTS_DIR) {
   foreach ($ofl in Get-ChildItem -Path (Join-Path $env:CRAFT_FONTS_DIR 'fonts\*\OFL.txt') -File -ErrorAction SilentlyContinue) {
     Copy-Item -LiteralPath $ofl.FullName -Destination (Join-Path $Docs "OFL-$($ofl.Directory.Name).txt")
@@ -106,21 +114,59 @@ if ($env:CRAFT_FONTS_DIR) {
 # ---- end font notices for the MSI --------------------------------------------------------------
 
 # ---- MSI ---------------------------------------------------------------------------------------
-$Msi = Join-Path $Dist "gridcraft-$Version-windows-$Arch.msi"
-Invoke-Native 'wix build' {
-  wix build (Join-Path $PSScriptRoot 'gridcraft.wxs') -arch $Arch `
+# The installer's welcome page shows the license: build its RTF from LICENSE-MIT and LICENSE-APACHE
+# so it never drifts from them. Hard-wrapped lines are rejoined into paragraphs so the text wraps
+# to the dialog's width.
+function ConvertTo-RtfText([string] $Text) {
+  $sb = [System.Text.StringBuilder]::new()
+  foreach ($ch in $Text.ToCharArray()) {
+    $c = [int] $ch
+    if ($c -eq 0x5C -or $c -eq 0x7B -or $c -eq 0x7D) { [void] $sb.Append('\').Append($ch) }
+    elseif ($c -gt 127) { [void] $sb.Append("\u$(if ($c -gt 32767) { $c - 65536 } else { $c })?") }
+    else { [void] $sb.Append($ch) }
+  }
+  return $sb.ToString()
+}
+$paragraphs = [System.Collections.Generic.List[string]]::new()
+$paragraphs.Add('\b Lusk Tab\b0')
+$paragraphs.Add((ConvertTo-RtfText "Lusk Tab, publi$([char]0xE9) par l'association Lusk, est un logiciel libre et gratuit, sous la licence MIT ou la licence Apache, version 2.0, au choix. Vous pouvez l'utiliser, le copier et le partager librement. Le texte officiel des deux licences, en anglais, suit. Les polices et les autres $([char]0xE9)l$([char]0xE9)ments fournis avec Lusk Tab gardent leurs propres licences libres, list$([char]0xE9)es dans NOTICE et ATTRIBUTION.md sur https://github.com/declic29/LuskTab."))
+foreach ($file in 'LICENSE-MIT', 'LICENSE-APACHE') {
+  $title = $true  # each file opens with its license's name: show it bold
+  foreach ($para in ((Get-Content -Raw (Join-Path $Root $file)) -split '\r?\n\s*\r?\n')) {
+    $joined = (($para -split '\r?\n') | ForEach-Object { $_.Trim() } | Where-Object { $_ }) -join ' '
+    if (-not $joined) { continue }
+    $paragraphs.Add($(if ($title) { "\b $(ConvertTo-RtfText $joined)\b0" } else { ConvertTo-RtfText $joined }))
+    $title = $false
+  }
+}
+$LicenseRtf = Join-Path $Stage 'license.rtf'
+$rtf = '{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fswiss\fcharset0 Tahoma;}}\viewkind4\uc1\pard\sa120\f0\fs16 ' +
+  ($paragraphs -join "\par`r`n") + "\par`r`n}`r`n"
+[System.IO.File]::WriteAllText($LicenseRtf, $rtf, [System.Text.Encoding]::ASCII)
+
+# One MSI from one dual-scope source (see gridcraft.wxs and install-policy.wxi): per user by default into
+# %LOCALAPPDATA%\Programs\Lusk\Lusk Tab (#39), per machine into Program Files\Lusk on request.
+# The plain name is the one every sibling app, the launcher and the shared windows-arm64 workflow expect.
+$Msi = Join-Path $Dist "Lusk-Tab-$Version-windows-$Arch.msi"
+Invoke-Native "wix build" {
+  wix build (Join-Path $PSScriptRoot 'gridcraft.wxs') (Join-Path $PSScriptRoot 'lusk-welcome.wxs') -arch $Arch `
+    -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext `
+    -culture fr-FR -loc (Join-Path $PSScriptRoot 'lusk-fr.wxl') `
     -d "Version=$MsiVersion" -d "BinDir=$Stage" -d "IconPath=$(Join-Path $Root 'assets\app-icon\gridcraft.ico')" `
-    -d "DocsDir=$Docs" -d "HasCraftFontLicences=$HasCraftFontLicences" `
+    -d "LicenseRtf=$LicenseRtf" `
+    -d "AppNoticesDir=$AppNotices" -d "DocsDir=$Docs" -d "HasCraftFontLicences=$HasCraftFontLicences" -d "Scope=perUserOrMachine" `
     -o $Msi
 }
 # Check the compiled scope, path and registration contract before signing.
-& (Join-Path $PSScriptRoot 'check-install-policy.ps1') -MsiPath $Msi
+$shell = (Get-Process -Id $PID).Path
+& $shell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'check-install-policy.ps1') -MsiPath $Msi
+if ($LASTEXITCODE -ne 0) { throw "Compiled installer policy failed for $Msi." }
 # wix writes its debug symbols (.wixpdb) next to the MSI; keep them out of the release assets.
 Remove-Item -Force -ErrorAction SilentlyContinue ([IO.Path]::ChangeExtension($Msi, '.wixpdb'))
 & (Join-Path $PSScriptRoot 'sign.ps1') $Msi
 
 # ---- portable zip ------------------------------------------------------------------------------
-$Portable = Join-Path $TargetDir "windows-package\gridcraft-$Version-windows-$Arch-portable"
+$Portable = Join-Path $TargetDir "windows-package\Lusk-Tab-$Version-windows-$Arch-portable"
 Remove-Item -Recurse -Force $Portable -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Portable | Out-Null
 Copy-Item (Join-Path $Stage '*.exe') $Portable
@@ -134,7 +180,7 @@ if ($env:CRAFT_FONTS_DIR) {
     Copy-Item $ofl.FullName (Join-Path $Portable "OFL-$($ofl.Directory.Name).txt")
   }
 }
-$Zip = Join-Path $Dist "gridcraft-$Version-windows-$Arch-portable.zip"
+$Zip = Join-Path $Dist "Lusk-Tab-$Version-windows-$Arch-portable.zip"
 Remove-Item -Force $Zip -ErrorAction SilentlyContinue
 Compress-Archive -Path $Portable -DestinationPath $Zip
 

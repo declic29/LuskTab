@@ -35,6 +35,10 @@ list (author, source, license) is in ATTRIBUTION.md.
 - English thesaurus (assets/thesaurus/en/th_en_US_v2.dat.gz) — from WordNet 2.1, Copyright 2005
   by Princeton University, under the WordNet License (assets/thesaurus/en/WordNet_license.txt);
   the LibreOffice th_en_US_v2.dat file, compressed with gzip.
+- Windows installer welcome page (packaging/windows/lusk-welcome.wxs) — taken from Lusk Texte,
+  adapted from WelcomeEulaDlg.wxs of the WiX Toolset 5.0.2, Copyright (c) .NET Foundation and
+  contributors, Microsoft Reciprocal License (packaging/windows/LICENSE-WiX-MS-RL.txt). The
+  installer itself is built with the WiX Toolset (https://wixtoolset.org), whose dialogs it uses.
 - English word list (assets/hyphenation/en-us.dic) — derived from the Moby Hyphenator II list by
   Grady Ward, public domain (Project Gutenberg eBook #3204). The hyphenation patterns
   (assets/hyphenation/en-us.pat) were trained from it and are released as CC0-1.0.

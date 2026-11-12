@@ -177,15 +177,34 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   - fenêtres de mise à jour de craft-update en français : traducteur `translate` dans
     `updates_ui.rs`, textes dans `i18n/fr.rs` ; images de contrôle avec
     `LUSK_UPDATE_SHOTS=<dossier> cargo test -p gridcraft-ui-egui update_windows_pictures`.
+- 12 novembre 2026, **installateurs en français et workflow « Publication »** (repris de Lusk
+  Texte), version **1.0.0** :
+  - `.github/workflows/release.yml` : une étiquette `vX.Y.Z` (égale à la version du Cargo.toml)
+    fabrique les installateurs Windows, macOS et Linux et prépare une Release en brouillon, avec
+    SHA256SUMS.txt et les copies aux noms stables (`Lusk-Tab-Windows.msi`, `-Mac.dmg`,
+    `-Linux.AppImage`, `-Linux.deb`) des liens du README. Plus de dépendance au workflow partagé de
+    storytold ; `windows-arm64.yml` retiré ;
+  - fichiers publiés `Lusk-Tab-<version>-<système>-<architecture>.<ext>`, reconnus par la mise à
+    jour (test `release_files_named_lusk_tab_are_found`) ;
+  - Windows : `packaging/windows/gridcraft.wxs` réécrit sur le modèle de Lusk Texte (installateur
+    en français, page d'accueil Lusk `lusk-welcome.wxs`, textes `lusk-fr.wxl`, images au logo et
+    au renard `images/`, choix « Pour moi seulement » / « Pour tous les utilisateurs », dossier
+    `Programs\Lusk\Lusk Tab`, raccourci du Bureau coché, « Lancer Lusk Tab » à la fin, types
+    .xlsx .xlsm .xls .xlsb .ods .csv .tsv dans « Ouvrir avec » sans prendre la place du
+    programme par défaut). Nouvel UpgradeCode `59E39F09-9F0F-494C-96BD-06E3C9EBCCFE` (ne pas le
+    changer) ;
+  - macOS : `Lusk Tab.app` dans `Lusk-Tab-<version>-macos-universal.dmg`, fond de fenêtre vert
+    Lusk (`packaging/macos/dmg/background.py`), script de Lusk Texte (vérification stricte de la
+    signature dans le DMG) ;
+  - Linux : AppImage, .deb et .rpm (paquet `lusk-tab`), .tar.gz ; l'AppImage se met à jour depuis
+    `declic29/LuskTab`.
 
 ## À faire (dans l'ordre du cahier des charges)
 
-1. Fin de la marque avec les installateurs : fichiers Windows (`gridcraft.wxs`, dossier
-   `ArtCraft\GridCraft`, éditeur), macOS (`package.sh`, nom de l'app, DMG : le fond
-   `packaging/macos/dmg/background.svg` pointait vers l'ancienne icône SVG, à refaire),
-   `sign.ps1`, `flatpak-oci.sh`.
-2. Installateurs en français et workflow « Publication » (repris de Lusk Texte).
-3. Version 1.0.0.
+1. Flatpak (`flatpak-oci.sh`, `flatpak-bundle.sh`) : encore aux noms de GridCraft, hors de la
+   publication pour l'instant.
+2. Version 1.0.0 : pousser l'étiquette `v1.0.0`, tester les installateurs du brouillon sur
+   Windows, Mac et Linux, puis publier la Release.
 
 ## Façon de travailler avec Claude
 

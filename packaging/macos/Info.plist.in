@@ -5,7 +5,7 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleDevelopmentRegion</key>
-  <string>en</string>
+  <string>fr</string>
   <!-- UI translations are embedded in Rust; declare them for AppKit's system dialogs (open and
        save panels, overwrite confirmation). Keep in sync with the interface languages. -->
   <key>CFBundleLocalizations</key>
@@ -35,7 +35,7 @@
   <key>CFBundleName</key>
   <string>Lusk Tab</string>
   <key>CFBundleExecutable</key>
-  <string>GridCraft</string>
+  <string>Lusk Tab</string>
   <key>CFBundleIdentifier</key>
   <string>bzh.lusk.tab</string>
   <key>CFBundleInfoDictionaryVersion</key>
@@ -53,7 +53,7 @@
   <key>GridCraftBuildCommit</key>
   <string>@BUILD_SHA@</string>
   <key>CFBundleIconFile</key>
-  <string>GridCraft</string>
+  <string>Lusk Tab</string>
   <key>LSApplicationCategoryType</key>
   <string>public.app-category.productivity</string>
   <!-- Must match MACOSX_DEPLOYMENT_TARGET in package.sh. Big Sur is the first release on
@@ -135,7 +135,23 @@
       <key>CFBundleTypeMIMETypes</key>
       <array><string>text/tab-separated-values</string></array>
     </dict>
-    <!-- .xlsb and .ods are imported (data only) into a new workbook that saves as .xlsx. -->
+    <!-- .xls, .xlsb and .ods are imported into a new workbook that saves as .xlsx. -->
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Excel 97-2003 Workbook</string>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>LSHandlerRank</key>
+      <string>Alternate</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>com.microsoft.excel.xls</string>
+      </array>
+      <key>CFBundleTypeExtensions</key>
+      <array><string>xls</string></array>
+      <key>CFBundleTypeMIMETypes</key>
+      <array><string>application/vnd.ms-excel</string></array>
+    </dict>
     <dict>
       <key>CFBundleTypeName</key>
       <string>Excel Binary Workbook</string>

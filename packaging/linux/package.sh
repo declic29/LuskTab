@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Build and package GridCraft for Linux (<arch> is x86_64 or aarch64, or riscv64 when cross-compiling):
+# Build and package Lusk Tab for Linux (<arch> is x86_64 or aarch64, or riscv64 when cross-compiling):
 #
-#   $DIST/gridcraft-<version>-linux-<arch>.AppImage  any distro with glibc >= the build host's
-#   $DIST/gridcraft-<version>-linux-<arch>.AppImage.zsync  delta updates (needs zsyncmake)
-#   $DIST/gridcraft-<version>-linux-<arch>.deb       Debian, Ubuntu, Mint, Pop!_OS, ...
-#   $DIST/gridcraft-<version>-linux-<arch>.rpm       Fedora, openSUSE, RHEL, ...
-#   $DIST/gridcraft-<version>-linux-<arch>.tar.gz    plain FHS-style tree (bin/, share/)
+#   $DIST/Lusk-Tab-<version>-linux-<arch>.AppImage  any distro with glibc >= the build host's
+#   $DIST/Lusk-Tab-<version>-linux-<arch>.AppImage.zsync  delta updates (needs zsyncmake)
+#   $DIST/Lusk-Tab-<version>-linux-<arch>.deb       Debian, Ubuntu, Mint, Pop!_OS, ...
+#   $DIST/Lusk-Tab-<version>-linux-<arch>.rpm       Fedora, openSUSE, RHEL, ...
+#   $DIST/Lusk-Tab-<version>-linux-<arch>.tar.gz    plain FHS-style tree (bin/, share/)
 #
 # Usage: packaging/linux/package.sh [--skip-build] [--formats "appimage deb rpm tar"]
 #
@@ -39,9 +39,9 @@ case "$ARCH" in
   *) echo "unsupported architecture $ARCH" >&2; exit 2 ;;
 esac
 export GRIDCRAFT_MAINTAINER="${GRIDCRAFT_MAINTAINER:-Lusk <contact@lusk.bzh>}"
-BASENAME="gridcraft-$VERSION-linux-$ARCH"
+BASENAME="Lusk-Tab-$VERSION-linux-$ARCH"
 
-echo "==> GridCraft $VERSION for Linux $ARCH ($FORMATS)"
+echo "==> Lusk Tab $VERSION for Linux $ARCH ($FORMATS)"
 
 if [[ "$SKIP_BUILD" = 0 ]]; then
   if [[ -n "${CROSS_TARGET:-}" ]]; then
@@ -129,7 +129,7 @@ if has appimage; then
     printf '%s  %s\n' "$sha256" "$path" | sha256sum -c -
     return
   }
-  APPDIR="$WORK/GridCraft.AppDir"
+  APPDIR="$WORK/Lusk-Tab.AppDir"
   cp -R "$STAGE" "$APPDIR"
   ln -s usr/bin/gridcraft "$APPDIR/AppRun"
   cp "$HERE/$APP_ID.desktop" "$APPDIR/$APP_ID.desktop"
@@ -170,8 +170,8 @@ if has appimage; then
   # fetch only the blocks that changed in a newer release, through the .zsync published next to
   # each AppImage on GitHub Releases. `latest` is the newest published release that is not a
   # pre-release. A fork's builds point at its own releases through GITHUB_REPOSITORY.
-  REPO="${GITHUB_REPOSITORY:-storytold/gridcraft}"
-  UPDATE_INFO="gh-releases-zsync|${REPO%%/*}|${REPO#*/}|latest|gridcraft-*-linux-$ARCH.AppImage.zsync"
+  REPO="${GITHUB_REPOSITORY:-declic29/LuskTab}"
+  UPDATE_INFO="gh-releases-zsync|${REPO%%/*}|${REPO#*/}|latest|Lusk-Tab-*-linux-$ARCH.AppImage.zsync"
   # Extract-and-run: works without FUSE (containers, CI). The output embeds the static runtime,
   # so users don't need libfuse2 either. With zsyncmake on the host (CI installs the zsync
   # package) appimagetool also writes the .zsync, into its working directory, hence the cd.
