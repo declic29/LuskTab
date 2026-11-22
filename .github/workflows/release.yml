@@ -251,6 +251,17 @@ jobs:
           cp "Lusk-Tab-$VERSION-macos-universal.dmg" Lusk-Tab-Mac.dmg
           cp "Lusk-Tab-$VERSION-linux-x86_64.AppImage" Lusk-Tab-Linux.AppImage
           for deb in Lusk-Tab-"$VERSION"*.deb; do cp "$deb" Lusk-Tab-Linux.deb; done
+      - name: Copies au nom technique, pour le module de mise à jour
+        working-directory: dist
+        # Le module de mise à jour (craft-update) cherche le fichier à installer sous le nom
+        # technique de l'application (gridcraft-<version>-…), pas sous Lusk-Tab-<version>-… : sans ces
+        # copies, il trouve la nouvelle version mais refuse de l'installer (« has no … »).
+        run: |
+          for f in Lusk-Tab-"$VERSION"-*; do
+            [ -e "$f" ] || continue
+            cp "$f" "gridcraft${f#Lusk-Tab}"
+          done
+          ls -1
       - name: Calculer les empreintes (SHA256SUMS.txt)
         working-directory: dist
         run: |

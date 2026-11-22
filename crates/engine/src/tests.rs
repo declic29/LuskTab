@@ -2562,7 +2562,7 @@ fn ods_fixture() -> Vec<u8> {
 }
 
 #[test]
-fn ods_import_keeps_cached_values_and_reports_limits() {
+fn ods_import_keeps_formulas_and_reports_limits() {
     let bytes = ods_fixture();
     assert_eq!(gridcraft_xlsx::sniff(&bytes), gridcraft_xlsx::Format::Ods);
     for name in ["source.ods", "source.xlsx"] {
@@ -2572,12 +2572,15 @@ fn ods_import_keeps_cached_values_and_reports_limits() {
         assert!(s.take_ui_requests().iter().any(|r| matches!(r, crate::UiRequest::Message(_))));
         assert!(s.doc().unwrap().path.is_none());
         assert!(s.doc().unwrap().display_title().ends_with(".xlsx"));
-        assert_eq!(v(&s, "A1"), Value::Number(42.0));
+        // Lusk Tab : LibreOffice's formula is kept (converted) and calculated: SUM over a text
+        // cell and an empty one is 0, whatever the file had saved (42).
+        let formula = s.doc().unwrap().wb.active().unwrap().cell(CellRef::parse("A1").unwrap()).unwrap().formula.clone();
+        assert_eq!(formula.map(|f| f.text.clone()).as_deref(), Some("SUM(B1:B2)"));
+        assert_eq!(v(&s, "A1"), Value::Number(0.0));
         assert_eq!(v(&s, "B1"), Value::from("Original data"));
-        assert!(s.doc().unwrap().wb.active().unwrap().cell(CellRef::parse("A1").unwrap()).unwrap().formula.is_none());
         let saved = s.execute("file.saveBytes", json!({"format": "xlsx"})).unwrap();
         s.execute("file.open", json!({"name": "imported.xlsx", "base64": saved["base64"]})).unwrap();
-        assert_eq!(v(&s, "A1"), Value::Number(42.0));
+        assert_eq!(v(&s, "A1"), Value::Number(0.0));
     }
 }
 

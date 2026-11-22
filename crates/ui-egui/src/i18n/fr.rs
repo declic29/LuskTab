@@ -2059,6 +2059,19 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "The name written as the author of comments, notes and new workbooks" => {
             "Le nom inscrit comme auteur des commentaires, des notes et des nouveaux classeurs"
         }
+        // Lusk Tab : les avertissements à l'ouverture d'un fichier LibreOffice Calc (.ods).
+        "LibreOffice Calc file (.ods): values, formulas and merged cells are kept; formatting, charts and images are not. Save it as .xlsx: saving as .ods is not supported." => {
+            "Fichier LibreOffice Calc (.ods) : les valeurs, les formules et les cellules fusionnées sont reprises, mais pas la mise en forme, les graphiques ni les images. Enregistrez-le en .xlsx : l'enregistrement en .ods n'est pas possible."
+        }
+        "Some LibreOffice formulas could not be converted; they keep their last saved result and will not recalculate." => {
+            "Certaines formules de LibreOffice n'ont pas pu être converties : elles gardent leur dernier résultat enregistré et ne se recalculent plus."
+        }
+        "Some ODS sheet names were shortened or renamed to valid, unique XLSX sheet names." => {
+            "Certains noms de feuilles ont été raccourcis ou renommés pour être valides et uniques."
+        }
+        "Some ODS values or formula caches were unsupported or missing; their displayed text (or raw value) was kept as text. A formula without either is marked [Unavailable ODS formula result]." => {
+            "Certaines valeurs du fichier n'ont pas pu être lues : leur texte affiché a été gardé tel quel."
+        }
         _ => return None,
     })
 }

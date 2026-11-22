@@ -230,6 +230,12 @@
       "Software\\LuskTab",
       "DesktopShortcut",
       "#1"
+    ],
+    [
+      "-1",
+      "Software\\Learning Machines LLC\\Lusk Tab",
+      "InstallDir",
+      "[INSTALLFOLDER]"
     ]
   ],
   "mode": "dualScope"

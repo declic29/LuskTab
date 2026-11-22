@@ -199,6 +199,12 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   - Linux : AppImage, .deb et .rpm (paquet `lusk-tab`), .tar.gz ; l'AppImage se met à jour depuis
     `declic29/LuskTab`.
 
+- 22 novembre 2026, **fichiers LibreOffice Calc (.ods)** : les formules sont gardées, converties
+  depuis le format de LibreOffice (`of:=SUM([.A1:.A3])` → `SUM(A1:A3)`, références à d'autres
+  feuilles, `;` → `,`) et recalculées ; celles qu'on ne sait pas convertir (plage sur plusieurs
+  feuilles) gardent leur dernier résultat. Les avertissements à l'ouverture sont en français. La
+  mise en forme, les graphiques et l'enregistrement en .ods restent à faire.
+
 ## À faire (dans l'ordre du cahier des charges)
 
 1. Flatpak (`flatpak-oci.sh`, `flatpak-bundle.sh`) : encore aux noms de GridCraft, hors de la

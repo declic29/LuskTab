@@ -52,14 +52,16 @@ impl SheetApp {
             };
             self.notice = Some(Notice { text: text.into(), kind: NoticeKind::Warning, action: Some(("What this means".into(), "macros".into())) });
         } else {
+            // Lusk Tab : the reader's warnings are translated when the catalog has them.
+            let first = self.ui.language.tr(msgs[0]).to_string();
             let text = if msgs.len() == 1 {
-                msgs[0].to_string()
+                first
             } else {
                 self.ui
                     .language
                     .tr("{count} items in this file were handled differently. First: {first}")
                     .replace("{count}", &msgs.len().to_string())
-                    .replace("{first}", msgs[0])
+                    .replace("{first}", &first)
             };
             self.notice = Some(Notice { text, kind: NoticeKind::Info, action: None });
         }

@@ -1,5 +1,6 @@
-//! Data-only OpenDocument Spreadsheet import. Formula caches become constants; styles and
-//! other ODF features are deliberately not translated. All fixtures are authored in Rust.
+//! OpenDocument Spreadsheet import: values, merges and (Lusk Tab) formulas, converted from
+//! OpenFormula (`odf_formula`) with their saved results as values. Styles and other ODF
+//! features are not translated. All fixtures are authored in Rust.
 //! Format reference: ODF 1.3, part 3, sections 6.1 and 9.1:
 //! <https://docs.oasis-open.org/office/OpenDocument/v1.3/os/part3-schema/OpenDocument-v1.3-os-part3-schema.html>.
 
@@ -7,8 +8,8 @@ use std::io::{Cursor, Read};
 use std::sync::Arc;
 
 use gridcraft_core::date::{days_in_month, serial_from_ymd};
-use gridcraft_core::{CellRef, DateSystem, MAX_COLS, MAX_ROWS, RangeRef, Value};
-use gridcraft_model::{Cell, NumFmt, Sheet, StyleId, Workbook};
+use gridcraft_core::{CellError, CellRef, DateSystem, MAX_COLS, MAX_ROWS, RangeRef, Value};
+use gridcraft_model::{Cell, Formula, NumFmt, Sheet, StyleId, Workbook};
 use quick_xml::NsReader;
 use quick_xml::XmlVersion;
 use quick_xml::events::{BytesStart, Event};
@@ -44,9 +45,9 @@ pub(crate) fn has_mimetype(bytes: &[u8]) -> bool {
     (&mut file).take(MIME.len() as u64 + 1).read_to_end(&mut value).is_ok() && value == MIME
 }
 
-/// Imports ODS sheets, typed values, displayed text and merges. Cached formula results are
-/// imported as constants, so editing their inputs does not recalculate the original formula.
-/// Always inspect the returned warnings. Saving to ODS is not supported.
+/// Imports ODS sheets, typed values, displayed text, merges and formulas. A formula that can't
+/// be converted keeps only its saved result, as a constant (and a warning says so). Always
+/// inspect the returned warnings. Saving to ODS is not supported.
 pub fn read_ods(bytes: &[u8]) -> Result<(Workbook, ReadReport), IoError> {
     let mut package = Package::open(bytes)?;
     if !has_mimetype(bytes) {
@@ -62,6 +63,141 @@ pub fn read_ods(bytes: &[u8]) -> Result<(Workbook, ReadReport), IoError> {
         return Err(IoError::Format("ODS contains no worksheets".into()));
     }
     Ok((import.wb, import.report))
+}
+
+/// What the open notice says about an .ods file (translated by the interface's catalogs).
+pub(crate) const ODS_NOTICE: &str = "LibreOffice Calc file (.ods): values, formulas and merged cells are kept; formatting, charts and images are not. Save it as .xlsx: saving as .ods is not supported.";
+/// Said once when a formula could not be converted and kept only its saved result.
+pub(crate) const ODS_FORMULA_NOTICE: &str =
+    "Some LibreOffice formulas could not be converted; they keep their last saved result and will not recalculate.";
+
+/// Most characters of a formula converted (Excel's own limit is 8 192).
+const MAX_FORMULA: usize = 16_384;
+
+/// An OpenFormula formula (ODF 1.3 part 4, as `table:formula` holds it: `of:=SUM([.A1:.B3])`,
+/// `of:=[$Feuille1.A1]*2`) in the spelling Lusk Tab reads from .xlsx files (`SUM(A1:B3)`,
+/// `Feuille1!A1*2`): references lose their brackets and dots, a sheet becomes `Sheet!`, and the
+/// `;` between arguments becomes `,`. `None` for what has no equivalent (a reference spanning
+/// two sheets, another formula language, an unclosed bracket).
+pub(crate) fn odf_formula(text: &str) -> Option<String> {
+    if text.len() > MAX_FORMULA {
+        return None;
+    }
+    let body = match text.split_once(':') {
+        Some(("of" | "oooc", rest)) => rest,
+        // Already in Excel's spelling.
+        Some(("msoxl", rest)) => return Some(rest.strip_prefix('=').unwrap_or(rest).to_string()),
+        Some((ns, _)) if !ns.is_empty() && ns.chars().all(|c| c.is_ascii_alphanumeric()) => return None,
+        _ => text,
+    };
+    let body = body.strip_prefix('=').unwrap_or(body);
+    let mut out = String::with_capacity(body.len());
+    let mut chars = body.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => {
+                out.push('"');
+                // A string, with "" for a quote inside.
+                loop {
+                    match chars.next()? {
+                        '"' if chars.peek() == Some(&'"') => {
+                            chars.next();
+                            out.push_str("\"\"");
+                        }
+                        '"' => break,
+                        ch => out.push(ch),
+                    }
+                }
+                out.push('"');
+            }
+            '[' => {
+                let mut reference = String::new();
+                let mut quoted = false;
+                loop {
+                    match chars.next()? {
+                        '\'' => {
+                            quoted = !quoted;
+                            reference.push('\'');
+                        }
+                        ']' if !quoted => break,
+                        ch => reference.push(ch),
+                    }
+                }
+                out.push_str(&odf_reference(&reference)?);
+            }
+            ';' => out.push(','),
+            _ => out.push(c),
+        }
+    }
+    // Functions LibreOffice files under Microsoft's name (`COM.MICROSOFT.CONCAT`).
+    Some(out.replace("COM.MICROSOFT.", ""))
+}
+
+/// `.A1`, `$Feuille1.$A$1`, `'Mon budget'.A1:.B2` → `A1`, `Feuille1!$A$1`, `'Mon budget'!A1:B2`.
+fn odf_reference(r: &str) -> Option<String> {
+    let parts = split_outside_quotes(r, ':');
+    if parts.len() > 2 {
+        return None;
+    }
+    let mut sheet: Option<String> = None;
+    let mut cells = Vec::with_capacity(2);
+    for (i, part) in parts.iter().enumerate() {
+        let (s, cell) = match rsplit_outside_quotes(part, '.') {
+            Some((s, cell)) => (s.trim_start_matches('$'), cell),
+            None => ("", *part),
+        };
+        if cell.is_empty() || cell.contains(['.', '\'']) {
+            return None;
+        }
+        if cell.starts_with('#') {
+            // `[.#REF!]`: a reference LibreOffice already lost.
+            return Some("#REF!".into());
+        }
+        if !s.is_empty() {
+            match (&sheet, i) {
+                (None, 0) => sheet = Some(s.to_string()),
+                (Some(first), _) if first == s => {}
+                // A range over several sheets (3-D) has no single-sheet spelling.
+                _ => return None,
+            }
+        }
+        cells.push(cell);
+    }
+    let cells = cells.join(":");
+    Some(match sheet {
+        None => cells,
+        Some(s) if s.starts_with('\'') => format!("{s}!{cells}"),
+        Some(s) if s.chars().all(|c| c.is_alphanumeric() || c == '_') && !s.starts_with(|c: char| c.is_ascii_digit()) => format!("{s}!{cells}"),
+        Some(s) => format!("'{}'!{cells}", s.replace('\'', "''")),
+    })
+}
+
+fn split_outside_quotes(s: &str, sep: char) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let (mut quoted, mut start) = (false, 0);
+    for (i, c) in s.char_indices() {
+        if c == '\'' {
+            quoted = !quoted;
+        } else if c == sep && !quoted {
+            parts.push(&s[start..i]);
+            start = i + c.len_utf8();
+        }
+    }
+    parts.push(&s[start..]);
+    parts
+}
+
+fn rsplit_outside_quotes(s: &str, sep: char) -> Option<(&str, &str)> {
+    let mut quoted = false;
+    let mut at = None;
+    for (i, c) in s.char_indices() {
+        if c == '\'' {
+            quoted = !quoted;
+        } else if c == sep && !quoted {
+            at = Some(i);
+        }
+    }
+    at.map(|i| (&s[..i], &s[i + sep.len_utf8()..]))
 }
 
 fn is_ns(ns: ResolveResult<'_>, expected: &[u8]) -> bool {
@@ -215,6 +351,8 @@ struct CellDraft {
     kind: Option<String>,
     raw: Option<String>,
     formula: bool,
+    /// `table:formula`, in OpenFormula (`of:=SUM([.A1:.A3])`).
+    formula_text: Option<String>,
     text: String,
     paragraph: Option<usize>,
     paragraphs: usize,
@@ -240,7 +378,7 @@ impl Import {
         let mut wb = Workbook::new();
         wb.sheets.clear();
         let mut report = ReadReport::default();
-        report.warn("ODS data-only import: formulas become their saved results and will not recalculate. Source formatting, charts, images and other features are not imported. Save a new .xlsx file; ODS saving is not supported.");
+        report.warn(ODS_NOTICE);
         Self { wb, report, stack: vec![], sheet: None, row: None, cell: None, cells: 0, merges: 0, text: 0, formats: vec![], spreadsheet_seen: false }
     }
 
@@ -343,7 +481,7 @@ impl Import {
                     Some("string") => b"string-value",
                     _ => b"value",
                 };
-                self.cell = Some(CellDraft {
+                let mut draft = CellDraft {
                     depth,
                     repeat: positive(attr(reader, e, TABLE, b"number-columns-repeated")?, 1, u32::MAX)?,
                     width: positive(attr(reader, e, TABLE, b"number-columns-spanned")?, 1, MAX_COLS)?,
@@ -351,13 +489,16 @@ impl Import {
                     covered: t == Tag::Covered,
                     kind,
                     raw: attr(reader, e, OFFICE, key)?,
-                    formula: attr(reader, e, TABLE, b"formula")?.is_some(),
+                    formula_text: attr(reader, e, TABLE, b"formula")?,
+                    formula: false,
                     text: String::new(),
                     paragraph: None,
                     paragraphs: 0,
                     paragraph_started: false,
                     pending_space: false,
-                });
+                };
+                draft.formula = draft.formula_text.is_some();
+                self.cell = Some(draft);
             }
             Tag::Paragraph if self.cell.as_ref().is_some_and(|c| depth == c.depth + 1) => {
                 if let Some(cell) = self.cell.as_mut() {
@@ -485,6 +626,24 @@ impl Import {
     }
 
     fn convert(&mut self, draft: &CellDraft) -> Cell {
+        // Lusk Tab : a formula LibreOffice wrote is kept, so the sheet recalculates, with its saved
+        // result as the value until then. One that can't be converted stays its saved result.
+        let formula = draft.formula_text.as_deref().and_then(|f| {
+            let converted = odf_formula(f).map(|text| Formula::new(&crate::fmla::from_file(&text)));
+            if converted.as_ref().is_none_or(|f| f.expr.is_none()) {
+                self.report.warn(ODS_FORMULA_NOTICE);
+                return None;
+            }
+            converted
+        });
+        let mut cell = self.convert_value(draft, formula.is_some());
+        if let Some(f) = formula {
+            cell.formula = Some(Arc::new(f));
+        }
+        cell
+    }
+
+    fn convert_value(&mut self, draft: &CellDraft, has_formula: bool) -> Cell {
         let raw = draft.raw.as_deref();
         let mut format = None;
         let value = match draft.kind.as_deref() {
@@ -511,6 +670,17 @@ impl Import {
             }),
             None if !draft.formula => Some(if draft.text.is_empty() { Value::Empty } else { Value::Text(Arc::from(draft.text.as_str())) }),
             _ => None,
+        };
+        // A kept formula's error result (`#DIV/0!` written as text) is that error, and a missing
+        // result is left to the recalculation.
+        let value = if has_formula {
+            match value {
+                Some(Value::Text(t)) => Some(CellError::parse(t.trim()).map_or(Value::Text(t), Value::Error)),
+                None => Some(CellError::parse(draft.text.trim()).map_or(Value::Empty, Value::Error)),
+                v => v,
+            }
+        } else {
+            value
         };
         let value = value.unwrap_or_else(|| {
             self.report.warn("Some ODS values or formula caches were unsupported or missing; their displayed text (or raw value) was kept as text. A formula without either is marked [Unavailable ODS formula result].");

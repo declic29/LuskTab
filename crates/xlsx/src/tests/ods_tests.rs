@@ -40,7 +40,7 @@ fn ods_namespace_declaration_bomb_is_rejected() {
 }
 
 #[test]
-fn ods_typed_values_and_formula_caches_are_constants_and_survive_xlsx() {
+fn ods_typed_values_and_formulas_survive_xlsx() {
     let bytes = row(r#"
         <table:table-cell office:value-type="float" office:value="42.5"/>
         <table:table-cell office:value-type="boolean" office:boolean-value="true"/>
@@ -54,7 +54,7 @@ fn ods_typed_values_and_formula_caches_are_constants_and_survive_xlsx() {
         <table:table-cell office:value-type="boolean" office:boolean-value="0"/>
     "#);
     let (wb, report) = read_ods(&bytes).unwrap();
-    assert!(report.warnings.iter().any(|w| w.contains("data-only") && w.contains("will not recalculate")));
+    assert!(report.warnings.iter().any(|w| w.contains("(.ods)") && w.contains("formulas")));
     assert!(report.warnings.iter().any(|w| w.contains("unsupported or missing")));
     let expected = [
         Value::Number(42.5),
@@ -63,14 +63,23 @@ fn ods_typed_values_and_formula_caches_are_constants_and_survive_xlsx() {
         Value::Number(19.99),
         text("literal =1+1"),
         Value::Number(85.0),
-        text("#DIV/0!"),
-        text("[Unavailable ODS formula result]"),
+        Value::Error(gridcraft_core::CellError::Div0),
+        Value::Empty,
         text("unavailable"),
         Value::Bool(false),
     ];
     for (c, value) in expected.iter().enumerate() {
-        assert_eq!(&wb.sheets[0].value(CellRef::new(0, c as u32)), value);
-        assert!(wb.sheets[0].cell(CellRef::new(0, c as u32)).unwrap().formula.is_none());
+        assert_eq!(&wb.sheets[0].value(CellRef::new(0, c as u32)), value, "column {c}");
+        // Lusk Tab : the three formulas are kept (their saved results are the values until the
+        // sheet recalculates), the constants stay constants.
+        let formula = wb.sheets[0].cell(CellRef::new(0, c as u32)).and_then(|cell| cell.formula.as_ref().map(|f| f.text.clone()));
+        let expected_formula = match c {
+            5 => Some("A1*2"),
+            6 => Some("1/0"),
+            7 => Some("UNKNOWN()"),
+            _ => None,
+        };
+        assert_eq!(formula.as_deref(), expected_formula, "column {c}");
     }
     let (reopened, _) = read_xlsx(&write_xlsx(&wb).unwrap()).unwrap();
     for (c, value) in expected.iter().enumerate() {
@@ -242,9 +251,39 @@ fn ods_extension_error_cache_never_imports_its_placeholder_zero() {
     let bytes = row(
         r#"<table:table-cell xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0" calcext:value-type="error" office:value-type="float" office:value="0" table:formula="of:=1/0"><text:p>#DIV/0!</text:p></table:table-cell>"#,
     );
+    let (wb, _) = read_ods(&bytes).unwrap();
+    // The formula is kept and its saved result is the error, never the placeholder 0.
+    assert_eq!(wb.sheets[0].value(CellRef::new(0, 0)), Value::Error(gridcraft_core::CellError::Div0));
+    assert_eq!(wb.sheets[0].cell(CellRef::new(0, 0)).and_then(|c| c.formula.as_ref()).map(|f| f.text.as_str()), Some("1/0"));
+}
+
+/// Lusk Tab : what LibreOffice writes (`of:=SUM([.A1:.A3])`, `[$Feuille2.B1]`, `;` between
+/// arguments) becomes formulas Lusk Tab calculates.
+#[test]
+fn ods_libreoffice_formulas_are_converted_and_kept() {
+    let bytes = ods(r#"<table:table table:name="Feuille1"><table:table-row>
+        <table:table-cell office:value-type="float" office:value="1"/>
+        <table:table-cell office:value-type="float" office:value="2"/>
+        <table:table-cell table:formula="of:=SUM([.A1:.B1])" office:value-type="float" office:value="3"/>
+        <table:table-cell table:formula="of:=IF([.C1]&gt;2;&quot;grand&quot;;&quot;petit &quot;&quot;x&quot;&quot;&quot;)" office:value-type="string" office:string-value="grand"/>
+        <table:table-cell table:formula="of:=[$'Mon budget'.$A$1]+[$Feuille2.B1:.B2]" office:value-type="float" office:value="0"/>
+        <table:table-cell table:formula="of:=[.#REF!]" office:value-type="string"><text:p>#REF!</text:p></table:table-cell>
+        <table:table-cell table:formula="of:=SUM([Feuille1.A1:Feuille2.A1])" office:value-type="float" office:value="7"/>
+        <table:table-cell table:formula="msoxl:=A1" office:value-type="float" office:value="1"/>
+        </table:table-row></table:table>"#);
     let (wb, report) = read_ods(&bytes).unwrap();
-    assert_eq!(wb.sheets[0].value(CellRef::new(0, 0)), text("#DIV/0!"));
-    assert!(report.warnings.iter().any(|w| w.contains("unsupported or missing")));
+    let cell = |c: u32| wb.sheets[0].cell(CellRef::new(0, c)).unwrap();
+    let f = |c: u32| cell(c).formula.as_ref().map(|f| f.text.clone());
+    assert_eq!(f(2).as_deref(), Some("SUM(A1:B1)"));
+    assert_eq!(wb.sheets[0].value(CellRef::new(0, 2)), Value::Number(3.0));
+    assert_eq!(f(3).as_deref(), Some(r#"IF(C1>2,"grand","petit ""x""")"#));
+    assert_eq!(wb.sheets[0].value(CellRef::new(0, 3)), text("grand"));
+    assert_eq!(f(4).as_deref(), Some("'Mon budget'!$A$1+Feuille2!B1:B2"));
+    assert_eq!(f(5).as_deref(), Some("#REF!"));
+    // A range over two sheets keeps its saved result only; Excel's own spelling is kept as is.
+    assert_eq!((f(6), wb.sheets[0].value(CellRef::new(0, 6))), (None, Value::Number(7.0)));
+    assert_eq!(f(7).as_deref(), Some("A1"));
+    assert!(report.warnings.iter().any(|w| w.contains("could not be converted")));
 }
 
 #[test]
