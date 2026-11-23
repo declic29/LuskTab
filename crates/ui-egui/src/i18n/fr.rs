@@ -2060,8 +2060,18 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
             "Le nom inscrit comme auteur des commentaires, des notes et des nouveaux classeurs"
         }
         // Lusk Tab : les avertissements à l'ouverture d'un fichier LibreOffice Calc (.ods).
-        "LibreOffice Calc file (.ods): values, formulas and merged cells are kept; formatting, charts and images are not. Save it as .xlsx: saving as .ods is not supported." => {
-            "Fichier LibreOffice Calc (.ods) : les valeurs, les formules et les cellules fusionnées sont reprises, mais pas la mise en forme, les graphiques ni les images. Enregistrez-le en .xlsx : l'enregistrement en .ods n'est pas possible."
+        "LibreOffice Calc file (.ods): values, formulas, formatting, merged cells, comments and charts are kept." => {
+            "Fichier LibreOffice Calc (.ods) : les valeurs, les formules, la mise en forme, les cellules fusionnées, les commentaires et les graphiques sont repris."
+        }
+        "This LibreOffice file also has images, drawings, conditional formatting or data validation, which Lusk Tab does not keep. Save it under a new name to keep the original file whole." => {
+            "Ce fichier LibreOffice contient aussi des images, des dessins, une mise en forme conditionnelle ou une validation des données, que Lusk Tab ne reprend pas. Enregistrez-le sous un autre nom pour garder le fichier d'origine intact."
+        }
+        "Some charts of this LibreOffice file could not be read and were left out." => {
+            "Certains graphiques de ce fichier LibreOffice n'ont pas pu être lus et ont été laissés de côté."
+        }
+        "OpenDocument Spreadsheet (*.ods)" => "Classeur OpenDocument (*.ods)",
+        "Save the workbook as an OpenDocument spreadsheet, for LibreOffice Calc." => {
+            "Enregistrer le classeur au format OpenDocument, pour LibreOffice Calc."
         }
         "Some LibreOffice formulas could not be converted; they keep their last saved result and will not recalculate." => {
             "Certaines formules de LibreOffice n'ont pas pu être converties : elles gardent leur dernier résultat enregistré et ne se recalculent plus."

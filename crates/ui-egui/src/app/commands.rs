@@ -388,6 +388,14 @@ impl SheetApp {
             }
             "saveAs" => {
                 let suggested = self.session.active().map(|d| d.display_title()).unwrap_or_else(|| "Book1".into());
+                // Lusk Tab : `format` (`ods`) picks the workbook format the name suggests.
+                let format = params.get("format").and_then(Json::as_str).filter(|f| matches!(*f, "xlsx" | "ods")).unwrap_or("xlsx");
+                let suggested = match params.get("format").and_then(Json::as_str) {
+                    Some(_) => {
+                        format!("{}.{format}", std::path::Path::new(&suggested).file_stem().and_then(std::ffi::OsStr::to_str).unwrap_or("Book1"))
+                    }
+                    None => suggested,
+                };
                 // Lusk Tab: `dir` opens the picker in that folder (a OneDrive or Google Drive folder).
                 let dir = params.get("dir").and_then(Json::as_str).filter(|d| !d.is_empty()).map(std::path::PathBuf::from);
                 let picked = match (&dir, &self.services.pick_save_in, &self.services.pick_save) {
@@ -397,11 +405,11 @@ impl SheetApp {
                 };
                 if let Some(picked) = picked {
                     if let Some(path) = picked {
-                        let path = if std::path::Path::new(&path).extension().is_none() { format!("{path}.xlsx") } else { path };
+                        let path = if std::path::Path::new(&path).extension().is_none() { format!("{path}.{format}") } else { path };
                         self.run_or_alert("file.save", json!({"path": path}));
                     }
                 } else if self.services.download.is_some()
-                    && let Ok(r) = self.run("file.saveBytes", json!({"format": "xlsx"}))
+                    && let Ok(r) = self.run("file.saveBytes", json!({"format": format}))
                     && let Some(dl) = &self.services.download
                     && let Some(b) = r.get("base64").and_then(Json::as_str).and_then(gridcraft_engine::io::base64_decode)
                 {

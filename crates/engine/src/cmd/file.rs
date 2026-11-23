@@ -67,11 +67,19 @@ fn open(s: &mut Session, p: &Json) -> Result<Json> {
         Some(path) => crate::io::source_path(path),
         None => Some(std::path::PathBuf::from(&name)),
     };
-    let imported =
-        matches!(crate::io::FileKind::from_path(&name), Some(crate::io::FileKind::Ods | crate::io::FileKind::Xlsb | crate::io::FileKind::Xls))
-            || matches!(gridcraft_xlsx::sniff(&bytes), gridcraft_xlsx::Format::Ods | gridcraft_xlsx::Format::Xlsb | gridcraft_xlsx::Format::Xls);
+    // Lusk Tab : an .ods file is saved back as .ods, unless it has what Lusk Tab does not keep
+    // (pictures, conditional formatting…): then Save asks for a new name, as for an import.
+    let ods_name = crate::io::FileKind::from_path(&name) == Some(crate::io::FileKind::Ods);
+    let ods = ods_name || gridcraft_xlsx::sniff(&bytes) == gridcraft_xlsx::Format::Ods;
+    let partial = ods && warnings.iter().any(|w| w == gridcraft_xlsx::ODS_PARTIAL_NOTICE);
+    let imported = partial
+        || (ods && !ods_name)
+        || (!ods
+            && (matches!(crate::io::FileKind::from_path(&name), Some(crate::io::FileKind::Xlsb | crate::io::FileKind::Xls))
+                || matches!(gridcraft_xlsx::sniff(&bytes), gridcraft_xlsx::Format::Xlsb | gridcraft_xlsx::Format::Xls)));
+    let stem = std::path::Path::new(&name).file_stem().and_then(std::ffi::OsStr::to_str).unwrap_or("Book");
     let title = if imported {
-        format!("{} (imported).xlsx", std::path::Path::new(&name).file_stem().and_then(std::ffi::OsStr::to_str).unwrap_or("Book"))
+        format!("{stem} (imported).{}", if ods { "ods" } else { "xlsx" })
     } else {
         std::path::Path::new(&name).file_name().and_then(std::ffi::OsStr::to_str).unwrap_or("Book").to_string()
     };
@@ -131,7 +139,7 @@ fn save(s: &mut Session, p: &Json) -> Result<Json> {
     };
     crate::io::write_file(&path, &bytes)?;
     // Only a full-fidelity format clears the dirty flag and becomes the document's file.
-    if matches!(kind, Some(crate::io::FileKind::Xlsx | crate::io::FileKind::Json)) {
+    if matches!(kind, Some(crate::io::FileKind::Xlsx | crate::io::FileKind::Json | crate::io::FileKind::Ods)) {
         // The new file is the workbook's own now, so `CELL("filename")` reports it (#1489). Set
         // before the `saved` snapshot, or the workbook would read as dirty the moment it was
         // saved; and only when it changes, so an ordinary Save does not clone the workbook.

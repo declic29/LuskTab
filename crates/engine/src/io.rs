@@ -497,7 +497,7 @@ pub fn save_bytes(wb: &Workbook, path: &str) -> Result<Vec<u8>> {
     // a typo like `.cvs` would otherwise produce a file no other app recognises.
     let Some(kind) = FileKind::from_path(path) else {
         let name = std::path::Path::new(path).file_name().and_then(std::ffi::OsStr::to_str).unwrap_or(path);
-        return Err(EngineError::Other(format!("{name}: unknown file format. Save as .xlsx, .csv, .tsv, .json or .html.")));
+        return Err(EngineError::Other(format!("{name}: unknown file format. Save as .xlsx, .ods, .csv, .tsv, .json or .html.")));
     };
     save_bytes_as(wb, path, kind)
 }
@@ -523,7 +523,8 @@ pub fn save_bytes_as(wb: &Workbook, path: &str, kind: FileKind) -> Result<Vec<u8
             Err(EngineError::Other("Excel 97-2003 (.xls) is supported for import only. Save as .xlsx or another supported export format.".into()))
         }
         FileKind::Xlsb => Err(EngineError::Other("XLSB is supported for data import only. Save as .xlsx or another supported export format.".into())),
-        FileKind::Ods => Err(EngineError::Other("ODS is supported for data import only. Save as .xlsx or another supported export format.".into())),
+        // Lusk Tab : an OpenDocument spreadsheet, for LibreOffice Calc.
+        FileKind::Ods => gridcraft_xlsx::write_ods(wb).map_err(|e| EngineError::Other(e.to_string())),
         FileKind::Sylk => {
             Err(EngineError::Other("SYLK (.slk) is supported for import only. Save as .xlsx or another supported export format.".into()))
         }

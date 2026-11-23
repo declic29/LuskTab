@@ -2561,53 +2561,116 @@ fn ods_fixture() -> Vec<u8> {
     zip.finish().unwrap().into_inner()
 }
 
+/// The fixture with a picture beside the data, which Lusk Tab does not keep.
+fn ods_fixture_with_picture() -> Vec<u8> {
+    use std::io::{Cursor, Read, Write};
+    let source = ods_fixture();
+    let mut archive = zip::ZipArchive::new(Cursor::new(&source[..])).unwrap();
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    for i in 0..archive.len() {
+        let mut part = archive.by_index(i).unwrap();
+        let name = part.name().to_string();
+        let mut data = String::new();
+        part.read_to_string(&mut data).unwrap();
+        if name == "content.xml" {
+            data = data
+                .replace(
+                    r#"xmlns:of="#,
+                    r#"xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:of="#,
+                )
+                .replace(
+                    "<text:p>Original data</text:p>",
+                    r#"<draw:frame><draw:image xlink:href="Pictures/logo.png"/></draw:frame><text:p>Original data</text:p>"#,
+                );
+        }
+        zip.start_file(name, options).unwrap();
+        zip.write_all(data.as_bytes()).unwrap();
+    }
+    zip.finish().unwrap().into_inner()
+}
+
 #[test]
-fn ods_import_keeps_formulas_and_reports_limits() {
+fn ods_open_keeps_formulas_and_saves_as_ods() {
     let bytes = ods_fixture();
     assert_eq!(gridcraft_xlsx::sniff(&bytes), gridcraft_xlsx::Format::Ods);
-    for name in ["source.ods", "source.xlsx"] {
+    for (name, title) in [("source.ods", "source.ods"), ("source.xlsx", "source (imported).ods")] {
         let mut s = s();
         let r = s.execute("file.open", json!({"name": name, "base64": crate::io::base64_encode(&bytes)})).unwrap();
         assert!(!r["warnings"].as_array().unwrap().is_empty());
         assert!(s.take_ui_requests().iter().any(|r| matches!(r, crate::UiRequest::Message(_))));
         assert!(s.doc().unwrap().path.is_none());
-        assert!(s.doc().unwrap().display_title().ends_with(".xlsx"));
-        // Lusk Tab : LibreOffice's formula is kept (converted) and calculated: SUM over a text
-        // cell and an empty one is 0, whatever the file had saved (42).
+        // Lusk Tab : an .ods file keeps its name and format; .ods content under another name is
+        // an import, saved under a new name.
+        assert_eq!(s.doc().unwrap().display_title(), title);
+        // LibreOffice's formula is kept (converted) and calculated: SUM over a text cell and an
+        // empty one is 0, whatever the file had saved (42).
         let formula = s.doc().unwrap().wb.active().unwrap().cell(CellRef::parse("A1").unwrap()).unwrap().formula.clone();
         assert_eq!(formula.map(|f| f.text.clone()).as_deref(), Some("SUM(B1:B2)"));
         assert_eq!(v(&s, "A1"), Value::Number(0.0));
         assert_eq!(v(&s, "B1"), Value::from("Original data"));
-        let saved = s.execute("file.saveBytes", json!({"format": "xlsx"})).unwrap();
-        s.execute("file.open", json!({"name": "imported.xlsx", "base64": saved["base64"]})).unwrap();
-        assert_eq!(v(&s, "A1"), Value::Number(0.0));
+        for format in ["xlsx", "ods"] {
+            let saved = s.execute("file.saveBytes", json!({"format": format})).unwrap();
+            let mut t = crate::tests::s();
+            t.execute("file.open", json!({"name": format!("saved.{format}"), "base64": saved["base64"]})).unwrap();
+            assert_eq!(v(&t, "A1"), Value::Number(0.0));
+            assert_eq!(v(&t, "B1"), Value::from("Original data"));
+            assert_eq!(
+                t.doc()
+                    .unwrap()
+                    .wb
+                    .active()
+                    .unwrap()
+                    .cell(CellRef::parse("A1").unwrap())
+                    .and_then(|c| c.formula.as_ref())
+                    .map(|f| f.text.clone())
+                    .as_deref(),
+                Some("SUM(B1:B2)")
+            );
+        }
     }
 }
 
+/// Lusk Tab : Save writes an opened .ods file back as .ods. A file with something Lusk Tab does
+/// not keep (a picture), or .ods content under another name, is never overwritten: Save asks
+/// for a new name.
 #[test]
 #[cfg(not(target_arch = "wasm32"))]
-fn ods_import_never_reuses_source_as_save_target() {
+fn ods_files_save_back_as_ods_unless_something_would_be_lost() {
     let nonce = unique_nonce();
     let dir = std::env::temp_dir().join(format!("gridcraft-ods-{}-{nonce}", std::process::id()));
     std::fs::create_dir(&dir).unwrap();
-    let bytes = ods_fixture();
-    for name in ["source.ods", "disguised.xlsx"] {
+    let path = dir.join("budget.ods");
+    std::fs::write(&path, ods_fixture()).unwrap();
+    let mut s = s();
+    s.execute("file.open", json!({"path": path})).unwrap();
+    s.take_ui_requests();
+    s.execute("cell.set", json!({"cell": "A1", "input": "43"})).unwrap();
+    s.execute("file.save", json!({})).unwrap();
+    assert!(!s.take_ui_requests().iter().any(|r| matches!(r, crate::UiRequest::Dialog(name, _) if name == "saveAs")));
+    assert!(!s.doc().unwrap().is_dirty());
+    let saved = std::fs::read(&path).unwrap();
+    assert_eq!(gridcraft_xlsx::sniff(&saved), gridcraft_xlsx::Format::Ods);
+    let (wb, _) = gridcraft_xlsx::read_ods(&saved).unwrap();
+    assert_eq!(wb.sheets[0].value(CellRef::parse("A1").unwrap()), Value::Number(43.0));
+    for (name, bytes) in [("picture.ods", ods_fixture_with_picture()), ("disguised.xlsx", ods_fixture())] {
         let path = dir.join(name);
         std::fs::write(&path, &bytes).unwrap();
-        let mut s = s();
-        s.execute("file.open", json!({"path": path})).unwrap();
+        let mut s = crate::tests::s();
+        let r = s.execute("file.open", json!({"path": path})).unwrap();
+        if name == "picture.ods" {
+            assert!(r["warnings"].as_array().unwrap().iter().any(|w| w.as_str() == Some(gridcraft_xlsx::ODS_PARTIAL_NOTICE)));
+        }
         s.take_ui_requests();
         s.execute("cell.set", json!({"cell": "A1", "input": "43"})).unwrap();
         s.execute("file.save", json!({})).unwrap();
         assert!(s.take_ui_requests().iter().any(|r| matches!(r, crate::UiRequest::Dialog(name, _) if name == "saveAs")));
         assert_eq!(std::fs::read(&path).unwrap(), bytes);
-        assert!(s.execute("file.saveAs", json!({"path": dir.join("source.ods")})).is_err());
-        assert!(s.execute("file.saveBytes", json!({"format": "ods"})).is_err());
-        let output = dir.join("converted.xlsx");
+        let output = dir.join(format!("copy of {name}.ods"));
         s.execute("file.saveAs", json!({"path": output})).unwrap();
         assert!(!s.doc().unwrap().is_dirty());
         assert_eq!(std::fs::read(&path).unwrap(), bytes);
-        s.execute("file.open", json!({"name": "converted.xlsx", "base64": crate::io::base64_encode(&std::fs::read(output).unwrap())})).unwrap();
+        s.execute("file.open", json!({"name": "copy.ods", "base64": crate::io::base64_encode(&std::fs::read(output).unwrap())})).unwrap();
         assert_eq!(v(&s, "A1"), Value::Number(43.0));
     }
     std::fs::remove_dir_all(dir).unwrap();

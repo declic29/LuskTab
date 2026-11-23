@@ -138,8 +138,14 @@ pub struct Backstage {
 
 /// Save As file types: (extension, label). The first is the workbook itself; the others are
 /// exports that leave the workbook's own file and unsaved state alone.
-pub const SAVE_TYPES: [(&str, &str); 4] =
-    [("xlsx", "Excel Workbook (*.xlsx)"), ("csv", "CSV UTF-8 (Comma delimited) (*.csv)"), ("html", "Web Page (*.html)"), ("pdf", "PDF (*.pdf)")];
+/// Lusk Tab : an OpenDocument spreadsheet (.ods, for LibreOffice Calc) is a workbook too.
+pub const SAVE_TYPES: [(&str, &str); 5] = [
+    ("xlsx", "Excel Workbook (*.xlsx)"),
+    ("ods", "OpenDocument Spreadsheet (*.ods)"),
+    ("csv", "CSV UTF-8 (Comma delimited) (*.csv)"),
+    ("html", "Web Page (*.html)"),
+    ("pdf", "PDF (*.pdf)"),
+];
 
 impl Backstage {
     pub fn new(page: Page) -> Backstage {
@@ -864,9 +870,10 @@ fn save_as(app: &mut SheetApp, ui: &mut Ui, bs: &mut Backstage, out: &mut Outcom
     if let Some(dir) = chosen
         && app.commit_edit(0, 0, false, false)
     {
-        if fmt == "xlsx" {
+        if fmt == "xlsx" || fmt == "ods" {
             let before = app.session.active().map(|d| (d.path.clone(), d.is_dirty()));
-            let params = dir.as_ref().map_or_else(|| json!({}), |d| json!({"dir": d.to_string_lossy()}));
+            let mut params = dir.as_ref().map_or_else(|| json!({}), |d| json!({"dir": d.to_string_lossy()}));
+            params["format"] = json!(fmt);
             app.open_dialog("saveAs", params);
             let after = app.session.active().map(|d| (d.path.clone(), d.is_dirty()));
             if after != before || app.services.pick_save.is_none() {
@@ -890,11 +897,23 @@ fn export(app: &mut SheetApp, ui: &mut Ui, out: &mut Outcome) {
     ui.add_space(14.0);
     section(ui, lang, "Change File Type");
     for (fmt, icon, title, detail) in [
+        ("ods", Icon::Save, "OpenDocument Spreadsheet (*.ods)", "Save the workbook as an OpenDocument spreadsheet, for LibreOffice Calc."),
         ("csv", Icon::TextColumns, "CSV (Comma delimited)", "Save the active sheet as comma-separated text."),
         ("html", Icon::Link, "Web Page (.html)", "Save the workbook as a web page."),
     ] {
-        if action_row(ui, icon, lang.tr(title), lang.tr(detail)).clicked() && export_as(app, fmt) {
-            out.close = true;
+        if action_row(ui, icon, lang.tr(title), lang.tr(detail)).clicked() {
+            if fmt == "ods" {
+                // Lusk Tab : a workbook format, saved through Save As like .xlsx.
+                if app.commit_edit(0, 0, false, false) {
+                    let before = app.session.active().map(|d| (d.path.clone(), d.is_dirty()));
+                    app.open_dialog("saveAs", json!({"format": "ods"}));
+                    if app.session.active().map(|d| (d.path.clone(), d.is_dirty())) != before || app.services.pick_save.is_none() {
+                        out.close = true;
+                    }
+                }
+            } else if export_as(app, fmt) {
+                out.close = true;
+            }
         }
     }
 }

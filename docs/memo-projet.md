@@ -202,8 +202,18 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
 - 22 novembre 2026, **fichiers LibreOffice Calc (.ods)** : les formules sont gardées, converties
   depuis le format de LibreOffice (`of:=SUM([.A1:.A3])` → `SUM(A1:A3)`, références à d'autres
   feuilles, `;` → `,`) et recalculées ; celles qu'on ne sait pas convertir (plage sur plusieurs
-  feuilles) gardent leur dernier résultat. Les avertissements à l'ouverture sont en français. La
-  mise en forme, les graphiques et l'enregistrement en .ods restent à faire.
+  feuilles) gardent leur dernier résultat. Les avertissements à l'ouverture sont en français.
+- 22 novembre 2026, version 1.0.2, **.ods complet** (`crates/xlsx/src/ods/`) : à l'ouverture,
+  mise en forme (polices, couleurs, fonds, bordures, alignements), formats des nombres
+  (`style.rs` → codes Excel), largeurs, hauteurs, colonnes et feuilles masquées, couleur
+  d'onglet, graphiques (`chart.rs`), commentaires, noms définis, volets figés (settings.xml).
+  **Enregistrement en .ods** (`write.rs`, formats `numfmt.rs`, formules en OpenFormula avec les
+  noms de fonctions de LibreOffice : `COM.MICROSOFT.…`, `LEGACY.…`). Un .ods ouvert se
+  réenregistre en .ods ; s'il contient ce que Lusk Tab ne garde pas (images, dessins, mise en
+  forme conditionnelle, validation), Enregistrer demande un autre nom pour ne pas abîmer
+  l'original. Vérifié en faisant ouvrir les fichiers par LibreOffice 24.2. À savoir :
+  LibreOffice refuse d'ouvrir un fichier dont le style « Default » énumère toutes ses
+  propriétés : on n'écrit que ce qui diffère ; la vue (settings.xml) exige l'espace de noms `ooo`.
 
 ## À faire (dans l'ordre du cahier des charges)
 
