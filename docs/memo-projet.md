@@ -214,6 +214,12 @@ est le document « Lusk Tab — Cahier des charges » dans les artefacts Claude 
   l'original. Vérifié en faisant ouvrir les fichiers par LibreOffice 24.2. À savoir :
   LibreOffice refuse d'ouvrir un fichier dont le style « Default » énumère toutes ses
   propriétés : on n'écrit que ce qui diffère ; la vue (settings.xml) exige l'espace de noms `ooo`.
+- 23 novembre 2026, version 1.0.3, **mise à jour automatique sans signature** : le module de mise
+  à jour est copié dans `vendor/craft-update` (voir son `LISEZ-MOI.md`). Sous Windows, une copie
+  non signée se met maintenant à jour elle-même (fichier de la Release GitHub, empreinte SHA-256
+  vérifiée) au lieu de proposer seulement « Télécharger », et l'éditeur « Lusk » de
+  l'installateur est reconnu. Les copies déjà installées (versions précédentes) ont encore
+  l'ancien module : cette version-là s'installe une fois à la main, les suivantes se font seules.
 
 ## À faire (dans l'ordre du cahier des charges)
 
