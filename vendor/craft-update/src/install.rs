@@ -1636,7 +1636,11 @@ pub mod macos {
             match signature(bundle, team, run, wait) {
                 Signature::Valid => {}
                 Signature::Canceled => return Err(CANCELLED.into()),
-                Signature::Wrong => return Err("the app isn't signed by its developer, so it wasn't installed".into()),
+                // Lusk: the association's apps carry an ad-hoc signature (no Apple Developer ID). A
+                // signature that is intact but not Learning Machines' is accepted: the download was
+                // already checked against the release's SHA256SUMS.txt, and an unsigned or damaged
+                // bundle still fails (`Signature::Failed`).
+                Signature::Wrong => {}
                 Signature::Failed(reason) => return Err(format!("the app failed its signature check ({reason}), so it wasn't installed")),
                 Signature::Unchecked(reason) => return Err(format!("the app's signature couldn't be checked ({reason}), so it wasn't installed")),
             }
@@ -3873,10 +3877,11 @@ esac
             assert_eq!(result, Err("the app's signature couldn't be checked (bad flag), so it wasn't installed".into()));
         }
 
+        /// Lusk: an intact signature from another signer (the apps' ad-hoc one) is accepted.
         #[test]
-        fn a_signature_that_fails_the_requirement_is_refused_as_not_the_developers() {
+        fn a_signature_that_fails_the_requirement_is_accepted_for_lusk() {
             let result = refusal_for(HelperFailure::Exited { code: 3, reason: "no".into() });
-            assert_eq!(result, Err("the app isn't signed by its developer, so it wasn't installed".into()));
+            assert_eq!(result, Ok(()));
         }
 
         #[test]
